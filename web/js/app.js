@@ -853,7 +853,7 @@
     const st = store.state;
     let html;
     if (!cfg) {
-      html = 'Aplikacja nie jest połączona z repozytorium. Wpisz jego nazwę i token, żeby zapisywać wpisy.';
+      html = 'Nie wiadomo, z którego repozytorium czytać. Uzupełnij owner i repo w pliku web/config.js.';
     } else {
       const link = `<a href="${esc(store.fileUrl(cfg))}" target="_blank" rel="noopener">${esc(`${cfg.owner}/${cfg.repo}`)}</a>`;
       const write = token ? 'Zapis włączony.' : 'Bez tokenu: tylko podgląd.';
@@ -882,11 +882,6 @@
   }
 
   function openSettings() {
-    const cfg = store.getConfig();
-    $('#s-owner').value = cfg ? cfg.owner : '';
-    $('#s-repo').value = cfg ? cfg.repo : '';
-    $('#s-branch').value = cfg ? cfg.branch : '';
-    $('#s-path').value = cfg ? cfg.path : '';
     $('#s-token').value = '';
     $('#s-token').placeholder = store.getToken() ? 'Token zapisany. Wklej nowy, żeby go zmienić.' : 'github_pat_…';
     $('#btn-forget-token').hidden = !store.getToken();
@@ -898,38 +893,26 @@
     showSheet(settingsSheet);
   }
 
-  function parseRepo(owner, repo) {
-    const joined = repo.includes('/') ? repo : owner.includes('/') ? owner : '';
-    const m = /(?:github\.com\/)?([A-Za-z0-9-]+)\/([A-Za-z0-9._-]+?)(?:\.git)?(?:[/?#].*)?$/.exec(joined);
-    return m ? { owner: m[1], repo: m[2] } : { owner, repo };
-  }
-
-  async function onConnect(ev) {
+  // The repo comes from config.js, so the only thing to set up here is the token.
+  async function onSaveToken(ev) {
     ev.preventDefault();
     if (ui.busy) return;
-    const { owner, repo } = parseRepo($('#s-owner').value.trim(), $('#s-repo').value.trim());
-    if (!owner || !repo) {
-      showMsg('#gh-msg', 'Podaj właściciela i nazwę repozytorium.', true);
+    const token = $('#s-token').value.trim();
+    if (!token && !store.getToken()) {
+      showMsg('#gh-msg', 'Wklej token, żeby zapisywać wpisy.', true);
       return;
     }
-    store.saveConfig({ owner, repo, branch: $('#s-branch').value, path: $('#s-path').value });
-    const token = $('#s-token').value.trim();
     if (token) store.setToken(token);
     if (store.state.mode === 'demo') store.exitDemo();
 
     const btn = $('#btn-connect');
-    setBusy(true, btn, 'Łączę…');
+    setBusy(true, btn, 'Sprawdzam…');
     await store.load();
     setBusy(false, btn);
     ui.logLimit = 21;
     ui.weekLimit = 8;
     update('init');
 
-    const cfg = store.getConfig();
-    $('#s-owner').value = cfg.owner;
-    $('#s-repo').value = cfg.repo;
-    $('#s-branch').value = cfg.branch;
-    $('#s-path').value = cfg.path;
     $('#s-token').value = '';
     $('#s-token').placeholder = store.getToken() ? 'Token zapisany. Wklej nowy, żeby go zmienić.' : 'github_pat_…';
     $('#btn-forget-token').hidden = !store.getToken();
@@ -940,7 +923,7 @@
       showMsg('#gh-msg', store.state.error.message, true);
     } else {
       const n = store.state.data.entries.length;
-      showMsg('#gh-msg', `Połączono. W pliku ${U.plural(n, 'jest', 'są', 'jest')} ${n} ${U.plural(n, 'wpis', 'wpisy', 'wpisów')}.${store.canWrite() ? '' : ' Bez tokenu tylko podgląd.'}`);
+      showMsg('#gh-msg', `Token zapisany. W pliku ${U.plural(n, 'jest', 'są', 'jest')} ${n} ${U.plural(n, 'wpis', 'wpisy', 'wpisów')}.${store.canWrite() ? '' : ' Bez tokenu tylko podgląd.'}`);
     }
   }
 
@@ -1088,7 +1071,7 @@
     });
 
     // Settings
-    $('#gh-form').addEventListener('submit', onConnect);
+    $('#gh-form').addEventListener('submit', onSaveToken);
     $('#btn-forget-token').addEventListener('click', onForgetToken);
     $('#goals-form').addEventListener('submit', onSaveGoals);
 

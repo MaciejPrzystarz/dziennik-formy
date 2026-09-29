@@ -11,7 +11,7 @@ web/                          aplikacja (tylko to publikuje GitHub Pages)
   index.html
   css/  js/  fonts/  icons/
   vendor/chart.umd.min.js     Chart.js 4.5.1
-  config.js                   owner/repo, gdy aplikacja nie stoi na GitHub Pages
+  config.js                   owner/repo z danymi (MaciejPrzystarz/dziennik-formy)
 data/health.json              dane, jedyne źródło prawdy
 CLAUDE.md                     zasady edycji danych dla Claude'a
 .github/workflows/pages.yml   deploy web/ na GitHub Pages
@@ -44,7 +44,7 @@ w `web/config.js` wpisz `owner` i `repo`). Strona zawiera tylko aplikację; dane
 2. Repository access: Only select repositories → to repozytorium.
 3. Repository permissions → Contents: **Read and write**.
 4. Expiration: np. 90 dni.
-5. W aplikacji: ikona ustawień → Token GitHuba → Połącz.
+5. W aplikacji: ikona ustawień → Token GitHuba → Zapisz token.
 
 Token zostaje w localStorage tej przeglądarki (na każdym urządzeniu wklejasz go raz). Nie wpisuj go do `config.js`
 ani do repozytorium. Bez tokenu aplikacja działa w trybie podglądu.

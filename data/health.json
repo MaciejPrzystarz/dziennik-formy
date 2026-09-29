@@ -9,5 +9,7 @@
     "weeklyTrainings": 4,
     "trainings": ["Upper A", "Lower", "Upper B", "Rower"]
   },
-  "entries": []
+  "entries": [
+    {"date": "2026-09-28", "weight": 87.5, "kcal": 2900}
+  ]
 }

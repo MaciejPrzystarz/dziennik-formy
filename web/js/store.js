@@ -242,7 +242,9 @@
         : 'Limit zapytań do GitHuba bez tokenu (60 na godzinę) się wyczerpał. Dodaj token w ustawieniach albo spróbuj później.', s);
     }
     if (s === 403) {
-      return new StoreError('forbidden', `Token nie ma dostępu do ${cfg.owner}/${cfg.repo}. Nadaj mu uprawnienie Contents: Read and write dla tego repozytorium.`, s);
+      return new StoreError('forbidden', `Token nie ma dostępu do ${cfg.owner}/${cfg.repo}${detail ? ` (${detail})` : ''}. ` +
+        `W ustawieniach tokenu na GitHubie: Repository access → Only select repositories → ${cfg.repo}, ` +
+        'a w Repository permissions → Contents: Read and write. Sam wybór „Public repositories” daje tylko odczyt.', s);
     }
     if (s === 404) {
       const where = `${cfg.path} w ${cfg.owner}/${cfg.repo} (gałąź ${cfg.branch})`;

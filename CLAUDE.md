@@ -32,7 +32,7 @@ Przykłady: „dziś 84,2, 2450 kcal, Upper A, 4/5”, „wczoraj rower 40 km, s
 
 - Wpis: `log: 2026-09-28 (84.2 kg, 2450 kcal, Upper A, 4/5)`: pola, które ma wpis, w tej kolejności.
 - Usunięcie: `log: usuń 2026-09-28`
-- Cele: `settings: cel 78 kg do 2027-03-31, 2459 kcal, 4 treningi/tydz.`
+- Cele: `settings: cel 78 kg do 2027-03-31, 2450 kcal, 4 treningi/tydz.`
 - Gałąź `main`. Zmieniaj tylko `data/health.json`, chyba że użytkownik prosi o zmiany w aplikacji.
 
 ## Zapis przez GitHub API (bez lokalnego repo)

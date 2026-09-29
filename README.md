@@ -64,8 +64,8 @@ z tego samego dnia się nie nadpisują. Po powrocie do karty dane odświeżają 
 
 ```json
 {
-  "settings": {"name": "Maciej", "startDate": "2026-09-28", "startWeight": 85, "targetWeight": 78,
-               "targetDate": "2027-03-31", "kcalTarget": 2459, "weeklyTrainings": 4,
+  "settings": {"name": "Maciej", "startDate": "2026-09-28", "startWeight": 86, "targetWeight": 78,
+               "targetDate": "2027-03-31", "kcalTarget": 2450, "weeklyTrainings": 4,
                "trainings": ["Upper A", "Lower", "Upper B", "Rower"]},
   "entries": [
     {"date": "2026-09-28", "weight": 84.2, "kcal": 2450, "training": "Upper A", "mood": 4, "note": "..."}

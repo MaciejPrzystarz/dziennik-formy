@@ -453,7 +453,7 @@
     const DAYS = 70;
     const start = U.addDays(end, -(DAYS - 1));
     const settings = normalizeSettings(Object.assign({}, DEFAULT_SETTINGS, {
-      startDate: start, startWeight: 86, targetDate: U.addDays(start, 184)
+      startDate: start, startWeight: 85, targetDate: U.addDays(start, 184)
     }));
     const missed = new Set([9, 23, 24, 41, 57]);
     const plan = { 0: 'Upper A', 2: 'Lower', 3: 'Upper B', 6: 'Rower' };

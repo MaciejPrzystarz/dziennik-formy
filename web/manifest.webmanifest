@@ -1,0 +1,16 @@
+{
+  "name": "Dziennik formy",
+  "short_name": "Forma",
+  "description": "Waga, kalorie, treningi i samopoczucie dzień po dniu.",
+  "lang": "pl",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#ECEEF0",
+  "theme_color": "#ECEEF0",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

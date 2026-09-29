@@ -1,0 +1,13 @@
+{
+  "settings": {
+    "name": "Maciej",
+    "startDate": "2026-09-28",
+    "startWeight": 85,
+    "targetWeight": 78,
+    "targetDate": "2027-03-31",
+    "kcalTarget": 2459,
+    "weeklyTrainings": 4,
+    "trainings": ["Upper A", "Lower", "Upper B", "Rower"]
+  },
+  "entries": []
+}

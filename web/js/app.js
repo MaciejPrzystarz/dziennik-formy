@@ -100,7 +100,7 @@
     streak.hidden = n < 2;
     streak.textContent = `🔥 ${n} ${n === 1 ? 'dzień' : 'dni'}`;
     streak.title = `Dni z wpisem bez przerwy. Rekord: ${vm.streak.best}.`;
-    $('#fab').hidden = !store.canWrite() || !vm.entries.length;
+    $('#fab').hidden = !store.canWrite(); // also on an empty diary: adding is the point of the page
     $('#btn-refresh').hidden = store.state.mode === 'demo';
     renderBanner(vm.entries.length > 0);
   }
@@ -130,8 +130,8 @@
       label = 'Dodaj token';
       action = openSettings;
     } else if (st.mode === 'local') {
-      text = 'Dane z pliku na dysku, tylko podgląd. Połącz aplikację z repozytorium, żeby zapisywać.';
-      label = 'Połącz z GitHubem';
+      text = 'Dane z pliku na dysku, tylko podgląd. Dodaj token w ustawieniach, żeby zapisywać.';
+      label = 'Dodaj token';
       action = openSettings;
     }
     const banner = $('#banner');
@@ -173,8 +173,8 @@
     empty.hidden = has;
     if (!has) {
       const first = $('#btn-first');
-      first.textContent = store.canWrite() ? 'Dodaj pierwszy wpis' : store.getConfig() ? 'Dodaj token' : 'Połącz z GitHubem';
-      first.onclick = store.canWrite() ? () => openEntry() : openSettings;
+      first.textContent = 'Dodaj pierwszy wpis';
+      first.onclick = () => openEntry();
     }
 
     const coach = $('#coach');
@@ -766,6 +766,7 @@
 
   function openEntry(date) {
     if (!store.canWrite()) {
+      toast('Dodaj token w ustawieniach, żeby zapisywać wpisy.');
       openSettings();
       return;
     }

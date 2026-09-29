@@ -18,7 +18,7 @@
     startWeight: 85,
     targetWeight: 78,
     targetDate: '2027-03-31',
-    kcalTarget: 2459,
+    kcalTarget: 2450,
     weeklyTrainings: 4,
     trainings: Object.freeze(['Upper A', 'Lower', 'Upper B', 'Rower'])
   });

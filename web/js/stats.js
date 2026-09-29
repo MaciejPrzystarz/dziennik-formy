@@ -145,6 +145,40 @@
     return { start, end, trainings };
   }
 
+  // One row per calendar week, from the week of the first entry to the current one. Weeks
+  // without a single entry stay in the list, so the calendar keeps its rhythm. `delta` compares
+  // the week's mean weight with the last week that had one, skipping weeks without weigh-ins.
+  function weeks(entries, today) {
+    const all = sorted(entries).filter((e) => e.date <= today);
+    if (!all.length) return [];
+    const byDay = new Map(all.map((e) => [e.date, e]));
+    const mean = (xs) => xs.reduce((s, x) => s + x, 0) / xs.length;
+    const out = [];
+    let prevAvg = null;
+    for (let start = U.weekStart(all[0].date); start <= U.weekStart(today); start = U.addDays(start, 7)) {
+      const days = U.dayRange(start, U.addDays(start, 6))
+        .map((key) => ({ key, entry: byDay.get(key) || null, future: key > today }));
+      const logged = days.map((d) => d.entry).filter(Boolean);
+      const ws = logged.filter(hasWeight).map((e) => e.weight);
+      const ks = logged.filter((e) => typeof e.kcal === 'number').map((e) => e.kcal);
+      const ms = logged.filter((e) => typeof e.mood === 'number').map((e) => e.mood);
+      const avg = ws.length ? mean(ws) : null;
+      out.push({
+        start,
+        end: U.addDays(start, 6),
+        days,
+        logged: logged.length,
+        weight: avg == null ? null : { avg, count: ws.length, min: Math.min(...ws) },
+        delta: avg != null && prevAvg != null ? avg - prevAvg : null,
+        kcal: ks.length ? { avg: mean(ks), count: ks.length } : null,
+        mood: ms.length ? { avg: mean(ms), count: ms.length } : null,
+        trainings: logged.filter(isTraining)
+      });
+      if (avg != null) prevAvg = avg;
+    }
+    return out;
+  }
+
   // Calorie state vs target: within 85–105% counts as "on target". Eating far below target is
   // shown neutrally, never rewarded.
   function kcalState(kcal, target) {
@@ -258,7 +292,7 @@
   DF.stats = {
     MOODS, byDate, sorted, isTraining,
     weightEntries, latestWeight, minWeight, movingAverage, trendWeight, slope, planWeightAt,
-    progress, plates, eta, streaks, weekSummary, kcalState, kcalSummary, moodSummary,
+    progress, plates, eta, streaks, weekSummary, weeks, kcalState, kcalSummary, moodSummary,
     badges, isNewLow, coachMessage
   };
 })(window.DF = window.DF || {});

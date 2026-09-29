@@ -20,6 +20,7 @@
     vm: null,
     range: 30,
     logLimit: 21,
+    weekLimit: 8,
     busy: false,
     loading: false,
     original: null, // the entry as it was when the form was filled; used to merge on save
@@ -82,10 +83,12 @@
     const has = vm.entries.length > 0;
     $('#week').hidden = !has;
     $('#columns').hidden = !has;
+    $('#weeks').hidden = !has;
     $('#logbook').hidden = !has;
     if (!has) return;
     renderWeek(vm);
     renderCharts(vm);
+    renderWeeks(vm);
     renderHeatmap(vm);
     renderBadges(vm);
     renderLog(vm);
@@ -278,6 +281,78 @@
         <p class="stat-value">${moodValue}</p>
         <p class="mood-row" aria-label="Samopoczucie z ostatnich 7 dni">${moodRow}</p>
       </div>`;
+  }
+
+  // Week by week, newest first: a calendar row of days plus what the week averaged out to.
+  function renderWeeks(vm) {
+    const all = S.weeks(vm.entries, vm.today);
+    const rows = all.slice().reverse();
+    const writable = store.canWrite();
+    $('#weeks-list').innerHTML = rows.slice(0, ui.weekLimit).map((w) => weekCard(w, vm, writable)).join('');
+    $('#btn-weeks-more').hidden = rows.length <= ui.weekLimit;
+    $('#weeks-note').textContent = `${all.length} ${U.plural(all.length, 'tydzień', 'tygodnie', 'tygodni')} od pierwszego wpisu`;
+  }
+
+  function weekDelta(delta) {
+    if (delta == null) return '';
+    const d = Math.round(delta * 10) / 10; // one decimal, like the average it sits next to
+    const title = 'Zmiana średniej wobec poprzedniego tygodnia z pomiarami';
+    if (d === 0) return ` <em class="delta" title="${esc(title)}">bez zmian</em>`;
+    return ` <em class="delta is-${d < 0 ? 'down' : 'up'}" title="${esc(title)}">${d < 0 ? '▼' : '▲'} ${U.fmt1(Math.abs(d))}</em>`;
+  }
+
+  function weekDay(d, vm, writable) {
+    const e = d.entry;
+    const cls = ['wk-day'];
+    if (d.key === vm.today) cls.push('is-today');
+    if (d.future) cls.push('is-future');
+    else if (!e) cls.push('is-empty');
+    const what = e ? entrySummary(e) : d.future ? 'jeszcze przed nami' : 'brak wpisu';
+    const label = `${U.fmtDay(d.key)}: ${what}`;
+    const weight = e && typeof e.weight === 'number' ? U.fmtWeight(e.weight) : '';
+    const marks = e
+      ? (S.isTraining(e) ? `<i class="dot t-${trainingColor(e.training, vm.settings)}"></i>` : '') +
+        (e.mood ? `<span class="emoji">${S.MOODS[e.mood].emoji}</span>` : '')
+      : '';
+    const tag = writable && !d.future ? 'button' : 'div';
+    const attrs = tag === 'button' ? ` type="button" data-date="${d.key}"` : '';
+    return `<${tag} class="${cls.join(' ')}"${attrs} title="${esc(label)}" aria-label="${esc(label)}">` +
+      `<span class="wk-num">${U.fromKey(d.key).getDate()}</span>` +
+      `<span class="wk-kg">${weight}</span>` +
+      `<span class="wk-mark">${marks}</span>` +
+      `</${tag}>`;
+  }
+
+  function weekCard(w, vm, writable) {
+    const s = vm.settings;
+    const current = w.start === U.weekStart(vm.today);
+    const avg = w.weight
+      ? `${U.fmt1(w.weight.avg)}<small>kg</small>${weekDelta(w.delta)}`
+      : '<span class="none">–</span>';
+    const sub = w.weight
+      ? `średnia z ${w.weight.count} ${U.plural(w.weight.count, 'pomiaru', 'pomiarów', 'pomiarów')}`
+      : 'bez pomiarów wagi';
+    const kcal = w.kcal
+      ? `<span class="kcal-${S.kcalState(w.kcal.avg, s.kcalTarget)}">${U.fmtInt(w.kcal.avg)}<small> kcal/dzień</small></span>`
+      : '<span class="none">–</span>';
+    const trainings = `${w.trainings.length}${s.weeklyTrainings > 0 ? `<small>/${s.weeklyTrainings}</small>` : ''}`;
+    const mood = w.mood
+      ? `<span class="emoji">${S.MOODS[Math.round(w.mood.avg)].emoji}</span>${U.fmt1(w.mood.avg)}`
+      : '<span class="none">–</span>';
+    return `<article class="wk${current ? ' is-current' : ''}">` +
+      '<div class="wk-top">' +
+        `<h3 class="wk-range">${U.fmtRange(w.start, w.end)}${current ? '<span class="wk-tag">ten tydzień</span>' : ''}</h3>` +
+        `<p class="wk-avg">${avg}</p>` +
+        `<p class="wk-sub">${esc(sub)}</p>` +
+      '</div>' +
+      `<div class="wk-days">${w.days.map((d) => weekDay(d, vm, writable)).join('')}</div>` +
+      '<dl class="wk-facts">' +
+        `<div><dt>Kalorie</dt><dd>${kcal}</dd></div>` +
+        `<div><dt>Treningi</dt><dd>${trainings}</dd></div>` +
+        `<div><dt>Samopoczucie</dt><dd>${mood}</dd></div>` +
+        `<div><dt>Wpisy</dt><dd>${w.logged}<small>/7</small></dd></div>` +
+      '</dl>' +
+      '</article>';
   }
 
   function renderCharts(vm) {
@@ -492,6 +567,7 @@
     store.enterDemo();
     closeSheet(settingsSheet, true);
     ui.logLimit = 21;
+    ui.weekLimit = 8;
     update('demo');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
@@ -500,6 +576,7 @@
     store.exitDemo();
     closeSheet(settingsSheet, true);
     ui.logLimit = 21;
+    ui.weekLimit = 8;
     update('init');
     await refresh(false);
   }
@@ -844,6 +921,7 @@
     await store.load();
     setBusy(false, btn);
     ui.logLimit = 21;
+    ui.weekLimit = 8;
     update('init');
 
     const cfg = store.getConfig();
@@ -933,6 +1011,15 @@
     $('#btn-more').addEventListener('click', () => {
       ui.logLimit += 30;
       renderLog(ui.vm);
+    });
+    $('#btn-weeks-more').addEventListener('click', () => {
+      ui.weekLimit += 8;
+      renderWeeks(ui.vm);
+    });
+
+    $('#weeks-list').addEventListener('click', (ev) => {
+      const day = ev.target.closest('button.wk-day');
+      if (day) openEntry(day.dataset.date);
     });
 
     $('#range').addEventListener('click', (ev) => {

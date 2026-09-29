@@ -476,6 +476,76 @@ a { color: inherit; text-underline-offset: 2px; }
 .badge.is-off .badge-plate { background: transparent; border: 2px dashed var(--rule); box-shadow: none; color: var(--steel); }
 .badge.is-off .badge-title { color: var(--muted); }
 
+/* Weeks: one calendar row per week, newest first, with the week's averages under it. */
+.weeks { margin-top: 44px; }
+.wk-head, .wk-days { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 5px; }
+.wk-head { margin-bottom: 6px; color: var(--muted); font-size: 12.5px; text-align: center; }
+
+.wk { padding: 14px 0 16px; border-bottom: 1px solid var(--rule); }
+.wk-top {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: 0 12px;
+  margin-bottom: 8px;
+}
+.wk-range { font-family: var(--font-display); font-weight: 800; font-size: 22px; line-height: 1.1; }
+.wk.is-current .wk-range { text-decoration: underline 3px var(--plate-yellow); text-underline-offset: 4px; }
+.wk-tag {
+  margin-left: 8px;
+  padding: 2px 9px;
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--muted);
+  font-family: var(--font-ui);
+  font-weight: 600;
+  font-size: 12px;
+  vertical-align: 2px;
+}
+.wk-avg {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 27px;
+  line-height: 1.05;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+.wk-avg small { margin-left: 0.15em; font-size: 0.52em; color: var(--muted); }
+.wk-avg .delta { margin-left: 8px; font-size: 14px; }
+.wk-sub { grid-column: 2; color: var(--muted); font-size: 12.5px; text-align: right; }
+
+.wk-day {
+  display: grid;
+  align-content: start;
+  gap: 2px;
+  min-height: 66px;
+  padding: 6px 3px;
+  border: 1px solid var(--rule);
+  border-radius: 9px;
+  background: var(--surface);
+  text-align: center;
+  font: inherit;
+  color: inherit;
+}
+button.wk-day { cursor: pointer; }
+button.wk-day:hover { border-color: var(--ink); }
+.wk-day.is-empty { background: transparent; border-style: dashed; }
+.wk-day.is-future { background: transparent; border-color: transparent; }
+.wk-day.is-today { border-color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink); }
+.wk-num { color: var(--muted); font-size: 12px; line-height: 1.2; }
+.wk-day.is-today .wk-num { color: var(--ink); font-weight: 600; }
+.wk-kg { min-height: 1.2em; font-weight: 600; font-size: 14px; line-height: 1.2; font-variant-numeric: tabular-nums; }
+.wk-mark { display: flex; align-items: center; justify-content: center; gap: 3px; min-height: 16px; font-size: 13px; }
+
+.wk-facts { display: flex; flex-wrap: wrap; gap: 2px 22px; margin-top: 10px; }
+.wk-facts > div { display: flex; align-items: baseline; gap: 6px; }
+.wk-facts dt { color: var(--muted); font-size: 13px; }
+.wk-facts dd { font-weight: 600; font-size: 14px; font-variant-numeric: tabular-nums; }
+.wk-facts dd small { color: var(--muted); font-weight: 400; }
+.wk-facts .emoji { margin-right: 4px; }
+#btn-weeks-more { margin-top: 16px; }
+
 /* Logbook */
 .logbook { margin-top: 44px; }
 .log-month {
@@ -782,6 +852,16 @@ textarea { min-height: 66px; line-height: 1.4; resize: vertical; }
 @media (max-width: 480px) {
   .field-row, .grid-2 { grid-template-columns: 1fr; }
   .streak { padding: 3px 10px; font-size: 14px; }
+
+  .wk-head, .wk-days { gap: 3px; }
+  .wk-head { font-size: 11.5px; }
+  .wk-day { min-height: 58px; padding: 5px 2px; border-radius: 7px; }
+  .wk-num { font-size: 11px; }
+  .wk-kg { font-size: 13px; }
+  .wk-mark { min-height: 14px; font-size: 11px; }
+  .wk-range { font-size: 19px; }
+  .wk-avg { font-size: 23px; }
+  .wk-facts { gap: 2px 16px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

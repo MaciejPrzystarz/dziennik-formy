@@ -88,6 +88,14 @@
     return `${pad(d.getDate())}.${pad(d.getMonth() + 1)}`;
   }
 
+  // Week label: "21–27.09" inside one month, "28.09–04.10" across two.
+  function fmtRange(fromK, toK) {
+    const a = fromKey(fromK);
+    const b = fromKey(toK);
+    const sameMonth = a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth();
+    return `${sameMonth ? pad(a.getDate()) : fmtShort(fromK)}–${fmtShort(toK)}`;
+  }
+
   function fmtLong(key, withYear) {
     const d = fromKey(key);
     const year = withYear === undefined ? d.getFullYear() !== new Date().getFullYear() : withYear;
@@ -140,7 +148,7 @@
   DF.utils = {
     MINUS, WEEKDAYS,
     toKey, fromKey, todayKey, addDays, diffDays, isValidKey, weekdayIndex, weekStart, dayRange,
-    fmt1, fmt2, fmtInt, fmtWeight, signed, weightInput, fmtDay, fmtShort, fmtLong, fmtRelative, monthTitle, monthShort,
+    fmt1, fmt2, fmtInt, fmtWeight, signed, weightInput, fmtDay, fmtShort, fmtRange, fmtLong, fmtRelative, monthTitle, monthShort,
     parseNumber, plural, escapeHtml, clamp
   };
 })(window.DF = window.DF || {});

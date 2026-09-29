@@ -68,12 +68,13 @@ z tego samego dnia się nie nadpisują. Po powrocie do karty dane odświeżają 
                "targetDate": "2027-03-31", "kcalTarget": 2450, "weeklyTrainings": 4,
                "trainings": ["Upper A", "Lower", "Upper B", "Rower"]},
   "entries": [
-    {"date": "2026-09-28", "weight": 84.2, "kcal": 2450, "training": "Upper A", "mood": 4, "note": "..."}
+    {"date": "2026-09-28", "weight": 84.2, "kcal": 2450, "training": "Upper A", "mood": 4, "sleep": 7.5, "sleepScore": 82, "note": "..."}
   ]
 }
 ```
 
 Jeden wpis na dzień. Wszystkie pola poza `date` są opcjonalne. `mood`: 1 źle, 2 słabo, 3 OK, 4 dobrze, 5 petarda.
+`sleep`: godziny snu (np. 7.5), `sleepScore`: ocena snu 0–100.
 
 ## Jak liczone są wskaźniki
 
@@ -81,4 +82,5 @@ Jeden wpis na dzień. Wszystkie pola poza `date` są opcjonalne. `mood`: 1 źle,
   Liczy się średnia z 7 dni, więc jednodniowe wahania nie zdejmują talerzy.
 - Tempo: nachylenie wagi z ostatnich 3 tygodni. Prognoza: data osiągnięcia celu przy tym tempie.
 - Kalorie „w celu”: od 85% do 105% `kcalTarget`; powyżej 105% dzień jest „ponad cel”.
+- Sen: 7 h i więcej to noc „wystarczająca” (niebieski słupek), mniej to szary. Ocena snu ma osobny wykres 0–100.
 - Skrót klawiszowy `n`: nowy wpis.

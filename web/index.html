@@ -5,9 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Dziennik formy</title>
   <meta name="description" content="Waga, kalorie, treningi i samopoczucie dzień po dniu.">
-  <meta name="color-scheme" content="light dark">
-  <meta name="theme-color" content="#ECEEF0" media="(prefers-color-scheme: light)">
-  <meta name="theme-color" content="#16181C" media="(prefers-color-scheme: dark)">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#07051A">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="Forma">
@@ -28,12 +27,26 @@
 
   <header class="topbar">
     <div class="brand">
-      <svg class="brand-mark" viewBox="0 0 32 20" aria-hidden="true">
-        <rect x="1" y="9" width="30" height="2" rx="1" fill="currentColor"/>
-        <rect x="8" y="2" width="4" height="16" rx="1.2" class="bm-red"/>
-        <rect x="4.5" y="4.5" width="2.5" height="11" rx="1" class="bm-blue"/>
-        <rect x="20" y="2" width="4" height="16" rx="1.2" class="bm-red"/>
-        <rect x="25" y="4.5" width="2.5" height="11" rx="1" class="bm-blue"/>
+      <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true">
+        <defs>
+          <radialGradient id="bm-halo">
+            <stop offset=".42" stop-color="#000"/>
+            <stop offset=".5" stop-color="#fff"/>
+            <stop offset=".62" stop-color="#5CD6FF"/>
+            <stop offset=".8" stop-color="#A45CFF" stop-opacity=".6"/>
+            <stop offset="1" stop-color="#A45CFF" stop-opacity="0"/>
+          </radialGradient>
+          <linearGradient id="bm-disk" x1="0" x2="1">
+            <stop offset="0" stop-color="#FF3F63" stop-opacity="0"/>
+            <stop offset=".3" stop-color="#A45CFF"/>
+            <stop offset=".5" stop-color="#fff"/>
+            <stop offset=".7" stop-color="#5CD6FF"/>
+            <stop offset="1" stop-color="#3F6BFF" stop-opacity="0"/>
+          </linearGradient>
+        </defs>
+        <circle cx="16" cy="16" r="13" fill="url(#bm-halo)"/>
+        <ellipse cx="16" cy="16" rx="15.5" ry="3.2" fill="none" stroke="url(#bm-disk)" stroke-width="1.6"/>
+        <circle cx="16" cy="16" r="5.4" fill="#000"/>
       </svg>
       <span>Dziennik formy</span>
     </div>
@@ -123,6 +136,26 @@
             <div class="chart-box">
               <canvas id="chart-kcal" role="img" aria-label="Wykres kalorii dziennie względem celu"></canvas>
               <p class="chart-empty" hidden>Brak wpisów kalorii w tym okresie.</p>
+            </div>
+          </section>
+
+          <section class="block" aria-labelledby="h-sleep">
+            <div class="block-head">
+              <h2 id="h-sleep">Sen</h2>
+            </div>
+            <div class="legend" aria-hidden="true">
+              <span class="lg"><i class="sw sw-bar" style="--c: var(--plate-blue)"></i>7 h i więcej</span>
+              <span class="lg"><i class="sw sw-bar" style="--c: var(--steel)"></i>mniej niż 7 h</span>
+              <span class="lg"><i class="sw sw-dash" style="--c: var(--ink-2)"></i>zalecane minimum</span>
+            </div>
+            <div class="chart-box">
+              <canvas id="chart-sleep" role="img" aria-label="Wykres godzin snu dziennie względem 7 godzin"></canvas>
+              <p class="chart-empty" hidden>Brak wpisów snu w tym okresie.</p>
+            </div>
+            <h3 class="chart-sub">Ocena snu <small>0–100</small></h3>
+            <div class="chart-box is-short">
+              <canvas id="chart-sleep-score" role="img" aria-label="Wykres oceny snu w skali 0–100"></canvas>
+              <p class="chart-empty" hidden>Brak ocen snu w tym okresie.</p>
             </div>
           </section>
         </div>
@@ -239,6 +272,24 @@
           </div>
         </fieldset>
 
+        <div class="field-row">
+          <div class="field">
+            <label for="f-sleep">Sen</label>
+            <div class="with-unit">
+              <input id="f-sleep" name="sleep" inputmode="decimal" autocomplete="off" enterkeyhint="next" placeholder="np. 7,5">
+              <span class="unit">h</span>
+            </div>
+          </div>
+
+          <div class="field">
+            <label for="f-sleep-score">Ocena snu</label>
+            <div class="with-unit">
+              <input id="f-sleep-score" name="sleepScore" inputmode="numeric" autocomplete="off" enterkeyhint="next" placeholder="np. 82">
+              <span class="unit">/100</span>
+            </div>
+          </div>
+        </div>
+
         <div class="field">
           <label for="f-note">Notatka</label>
           <textarea id="f-note" name="note" rows="2" maxlength="280" placeholder="Opcjonalnie, np. rekord w przysiadzie"></textarea>
@@ -319,7 +370,7 @@
             <div class="field span-2">
               <label for="g-trainings">Rodzaje treningów</label>
               <input id="g-trainings" autocomplete="off" spellcheck="false">
-              <p class="hint">Oddziel przecinkami. Kolejność ustala kolory: niebieski, czerwony, żółty, zielony.</p>
+              <p class="hint">Oddziel przecinkami. Kolejność ustala kolory: niebieski, czerwony, fioletowy, błękitny.</p>
             </div>
           </div>
           <p class="form-msg" id="goals-msg" role="status" hidden></p>

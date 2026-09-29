@@ -1,4 +1,4 @@
-/* Dziennik formy: weight and calorie charts (Chart.js). Colors come from the CSS variables, so the
+/* Dziennik formy: weight, calorie and sleep charts (Chart.js). Colors come from the CSS variables, so the
    charts follow light and dark mode. */
 (function (DF) {
   'use strict';
@@ -159,6 +159,74 @@
     }, values.some((v) => v != null));
   }
 
+  // Hours of sleep as bars against the 7 h line. The score gets its own chart below:
+  // hours and a 0–100 score never share an axis.
+  function sleep(canvas, vm, range) {
+    const c = colors();
+    const days = chartDays(vm.entries, range, vm.today);
+    const byDay = new Map(vm.entries.map((e) => [e.date, e]));
+    const values = days.map((d) => (byDay.has(d) && typeof byDay.get(d).sleep === 'number' ? byDay.get(d).sleep : null));
+    const bars = values.map((v) => (v == null ? 'transparent' : v >= S.SLEEP_GOOD ? c.blue : c.steel));
+    const max = Math.max(S.SLEEP_GOOD, ...values.filter((v) => v != null));
+
+    const options = base(c, days);
+    options.scales.y.beginAtZero = true;
+    options.scales.y.suggestedMax = Math.ceil(max + 0.5);
+    options.scales.y.ticks.stepSize = 2;
+    options.scales.y.ticks.callback = (v) => `${v} h`;
+    options.plugins.tooltip.callbacks.label = (item) => {
+      if (item.dataset.type === 'line') return ` Zalecane minimum: ${S.SLEEP_GOOD} h`;
+      const e = byDay.get(days[item.dataIndex]);
+      const score = e && typeof e.sleepScore === 'number' ? `, ocena ${e.sleepScore}/100` : '';
+      return ` ${U.fmtHours(item.parsed.y)} h snu${score}`;
+    };
+
+    draw(canvas, {
+      type: 'bar',
+      data: {
+        labels: days,
+        datasets: [
+          {
+            type: 'line', label: 'Minimum', data: days.map(() => S.SLEEP_GOOD), borderColor: c.ink2, borderWidth: 1.5,
+            borderDash: [6, 5], pointRadius: 0, pointHoverRadius: 0, pointStyle: 'line', order: 0
+          },
+          {
+            type: 'bar', label: 'Sen', data: values, backgroundColor: bars, borderRadius: 3,
+            maxBarThickness: 18, categoryPercentage: 0.82, barPercentage: 0.92, order: 1
+          }
+        ]
+      },
+      options
+    }, values.some((v) => v != null));
+  }
+
+  function sleepScore(canvas, vm, range) {
+    const c = colors();
+    const days = chartDays(vm.entries, range, vm.today);
+    const byDay = new Map(vm.entries.filter((e) => typeof e.sleepScore === 'number').map((e) => [e.date, e.sleepScore]));
+    const values = days.map((d) => (byDay.has(d) ? byDay.get(d) : null));
+
+    const options = base(c, days);
+    options.scales.y.min = 0;
+    options.scales.y.max = 100;
+    options.scales.y.ticks.stepSize = 25;
+    options.plugins.tooltip.displayColors = false;
+    options.plugins.tooltip.callbacks.label = (item) => ` Ocena snu: ${item.parsed.y}/100`;
+
+    draw(canvas, {
+      type: 'line',
+      data: {
+        labels: days,
+        datasets: [{
+          label: 'Ocena snu', data: values, borderColor: c.blue, backgroundColor: c.blue, borderWidth: 2,
+          tension: 0.3, spanGaps: true, pointRadius: days.length > 120 ? 2 : 4, pointHoverRadius: 6,
+          pointBorderColor: c.bg, pointBorderWidth: 2, borderCapStyle: 'round', borderJoinStyle: 'round'
+        }]
+      },
+      options
+    }, values.some((v) => v != null));
+  }
+
   function colors() {
     return {
       bg: cssVar('--surface'),
@@ -180,5 +248,5 @@
     return true;
   }
 
-  DF.charts = { setup, weight, kcal, chartDays };
+  DF.charts = { setup, weight, kcal, sleep, sleepScore, chartDays };
 })(window.DF = window.DF || {});

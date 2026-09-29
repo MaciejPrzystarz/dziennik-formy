@@ -47,8 +47,9 @@
     const week = S.weekSummary(entries, today);
     const kcal = S.kcalSummary(entries, today, settings.kcalTarget);
     const mood = S.moodSummary(entries, today);
+    const sleep = S.sleepSummary(entries, today);
     return {
-      settings, entries, today, prog, latest, slopeDay, plan, planDiff, streak, week, kcal, mood,
+      settings, entries, today, prog, latest, slopeDay, plan, planDiff, streak, week, kcal, mood, sleep,
       pl: S.plates(prog),
       eta: S.eta(prog.trend, settings.targetWeight, slopeDay, asOf),
       badges: S.badges(entries, settings, today, prog),
@@ -70,6 +71,8 @@
     if (typeof e.kcal === 'number') parts.push(`${U.fmtInt(e.kcal)} kcal`);
     if (S.isTraining(e)) parts.push(e.training);
     if (!parts.length && e.mood) parts.push(`samopoczucie ${S.MOODS[e.mood].label.toLowerCase()}`);
+    if (!parts.length && typeof e.sleep === 'number') parts.push(`sen ${U.fmtHours(e.sleep)} h`);
+    if (!parts.length && typeof e.sleepScore === 'number') parts.push(`sen ${e.sleepScore}/100`);
     if (!parts.length) parts.push('notatka');
     return parts.join(', ');
   }
@@ -259,6 +262,12 @@
         : `<i class="gap" title="${esc(`${U.fmtDay(key)}: brak oceny`)}"></i>`;
     }).join('');
 
+    const sl = vm.sleep;
+    const sleepValue = sl && sl.hours != null ? `${U.fmt1(sl.hours)}<small>h</small>` : '–';
+    const sleepSub = !sl
+      ? 'brak snu z 7 dni'
+      : sl.score != null ? `średnia 7 dni, ocena ${U.fmtInt(sl.score)}/100` : 'średnia 7 dni, bez oceny';
+
     $('#week').innerHTML = `
       <div class="stat">
         <p class="stat-label">Treningi w tym tygodniu</p>
@@ -280,6 +289,11 @@
         <p class="stat-label">Samopoczucie</p>
         <p class="stat-value">${moodValue}</p>
         <p class="mood-row" aria-label="Samopoczucie z ostatnich 7 dni">${moodRow}</p>
+      </div>
+      <div class="stat">
+        <p class="stat-label">Sen</p>
+        <p class="stat-value">${sleepValue}</p>
+        <p class="stat-sub">${esc(sleepSub)}</p>
       </div>`;
   }
 
@@ -339,6 +353,10 @@
     const mood = w.mood
       ? `<span class="emoji">${S.MOODS[Math.round(w.mood.avg)].emoji}</span>${U.fmt1(w.mood.avg)}`
       : '<span class="none">–</span>';
+    const sleepParts = [];
+    if (w.sleep) sleepParts.push(`${U.fmt1(w.sleep.avg)}<small> h</small>`);
+    if (w.sleepScore) sleepParts.push(`${U.fmtInt(w.sleepScore.avg)}<small>/100</small>`);
+    const sleep = sleepParts.length ? sleepParts.join(' <small>·</small> ') : '<span class="none">–</span>';
     return `<article class="wk${current ? ' is-current' : ''}">` +
       '<div class="wk-top">' +
         `<h3 class="wk-range">${U.fmtRange(w.start, w.end)}${current ? '<span class="wk-tag">ten tydzień</span>' : ''}</h3>` +
@@ -350,6 +368,7 @@
         `<div><dt>Kalorie</dt><dd>${kcal}</dd></div>` +
         `<div><dt>Treningi</dt><dd>${trainings}</dd></div>` +
         `<div><dt>Samopoczucie</dt><dd>${mood}</dd></div>` +
+        `<div><dt>Sen</dt><dd>${sleep}</dd></div>` +
         `<div><dt>Wpisy</dt><dd>${w.logged}<small>/7</small></dd></div>` +
       '</dl>' +
       '</article>';
@@ -360,6 +379,8 @@
     $$('#range button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.range === String(ui.range))));
     DF.charts.weight($('#chart-weight'), vm, ui.range);
     DF.charts.kcal($('#chart-kcal'), vm, ui.range);
+    DF.charts.sleep($('#chart-sleep'), vm, ui.range);
+    DF.charts.sleepScore($('#chart-sleep-score'), vm, ui.range);
   }
 
   function moodAlpha(mood) {
@@ -475,6 +496,10 @@
       ? `<i class="dot t-${trainingColor(e.training, s)}"></i>${esc(e.training)}`
       : '<span class="none">bez treningu</span>';
     const mood = e.mood ? `<span title="${S.MOODS[e.mood].label}">${S.MOODS[e.mood].emoji}</span>` : '';
+    const sleepParts = [];
+    if (typeof e.sleep === 'number') sleepParts.push(`${U.fmtHours(e.sleep)}<small> h</small>`);
+    if (typeof e.sleepScore === 'number') sleepParts.push(`<small title="Ocena snu">${e.sleepScore}/100</small>`);
+    const sleep = sleepParts.length ? `<span class="log-sleep" title="Sen">${sleepParts.join(' ')}</span>` : '';
     const note = e.note ? `<span class="log-note">${esc(e.note)}</span>` : '';
 
     return `<${tag} class="log-row${e.date === today ? ' is-today' : ''}"${attrs}>` +
@@ -483,6 +508,7 @@
       `<span class="log-kcal">${kcal}</span>` +
       `<span class="log-train">${training}</span>` +
       `<span class="log-mood">${mood}</span>` +
+      sleep +
       note +
       `</${tag}>`;
   }
@@ -650,14 +676,20 @@
     const kcalRaw = $('#f-kcal').value.trim();
     const training = $('#f-trainings [aria-pressed="true"]');
     const mood = $('#f-moods [aria-pressed="true"]');
+    const sleepRaw = $('#f-sleep').value.trim();
+    const sleepScoreRaw = $('#f-sleep-score').value.trim();
     return {
       date: $('#f-date').value,
       weightRaw,
       kcalRaw,
+      sleepRaw,
+      sleepScoreRaw,
       weight: U.parseNumber(weightRaw),
       kcal: U.parseNumber(kcalRaw),
       training: training ? training.dataset.training : '',
       mood: mood ? Number(mood.dataset.mood) : null,
+      sleep: U.parseNumber(sleepRaw),
+      sleepScore: U.parseNumber(sleepScoreRaw),
       note: $('#f-note').value.trim()
     };
   }
@@ -668,6 +700,8 @@
     if (v.kcal != null) e.kcal = Math.round(v.kcal);
     if (v.training) e.training = v.training;
     if (v.mood) e.mood = v.mood;
+    if (v.sleep != null) e.sleep = Math.round(v.sleep * 100) / 100;
+    if (v.sleepScore != null) e.sleepScore = Math.round(v.sleepScore);
     if (v.note) e.note = v.note.slice(0, 280);
     return e;
   }
@@ -679,8 +713,12 @@
     if (v.weight != null && (v.weight < 20 || v.weight > 400)) return 'Waga poza zakresem 20–400 kg.';
     if (v.kcalRaw && v.kcal == null) return 'Kalorie muszą być liczbą, np. 2450.';
     if (v.kcal != null && (v.kcal < 0 || v.kcal > 20000)) return 'Kalorie poza zakresem 0–20 000.';
-    if (v.weight == null && v.kcal == null && !v.training && !v.mood && !v.note) {
-      return 'Wpisz przynajmniej jedną rzecz: wagę, kalorie, trening, samopoczucie albo notatkę.';
+    if (v.sleepRaw && v.sleep == null) return 'Sen musi być liczbą godzin, np. 7,5.';
+    if (v.sleep != null && (v.sleep < 0 || v.sleep > 24)) return 'Sen poza zakresem 0–24 h.';
+    if (v.sleepScoreRaw && v.sleepScore == null) return 'Ocena snu musi być liczbą, np. 82.';
+    if (v.sleepScore != null && (v.sleepScore < 0 || v.sleepScore > 100)) return 'Ocena snu poza zakresem 0–100.';
+    if (v.weight == null && v.kcal == null && !v.training && !v.mood && v.sleep == null && v.sleepScore == null && !v.note) {
+      return 'Wpisz przynajmniej jedną rzecz: wagę, kalorie, trening, samopoczucie, sen albo notatkę.';
     }
     return null;
   }
@@ -760,6 +798,8 @@
     buildTrainingChips(ui.vm.settings, e && e.training);
     pressOnly($('#f-trainings'), (b) => !!e && b.dataset.training === (e.training || ''));
     pressOnly($('#f-moods'), (b) => !!e && Number(b.dataset.mood) === e.mood);
+    $('#f-sleep').value = e && typeof e.sleep === 'number' ? U.fmtHours(e.sleep) : '';
+    $('#f-sleep-score').value = e && typeof e.sleepScore === 'number' ? String(e.sleepScore) : '';
     $('#f-note').value = e && e.note ? e.note : '';
     updateKcalHint();
   }

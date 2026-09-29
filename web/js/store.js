@@ -23,7 +23,7 @@
     trainings: Object.freeze(['Upper A', 'Lower', 'Upper B', 'Rower'])
   });
   const SETTING_KEYS = Object.keys(DEFAULT_SETTINGS);
-  const ENTRY_FIELDS = ['weight', 'kcal', 'training', 'mood', 'note'];
+  const ENTRY_FIELDS = ['weight', 'kcal', 'training', 'mood', 'sleep', 'sleepScore', 'note'];
 
   class StoreError extends Error {
     constructor(kind, message, status) {
@@ -83,6 +83,10 @@
     if (typeof raw.training === 'string' && raw.training.trim()) e.training = raw.training.trim();
     const mood = U.parseNumber(raw.mood);
     if (mood != null && mood >= 1 && mood <= 5) e.mood = Math.round(mood);
+    const sleep = U.parseNumber(raw.sleep);
+    if (sleep != null && sleep >= 0 && sleep <= 24) e.sleep = Math.round(sleep * 100) / 100;
+    const sleepScore = U.parseNumber(raw.sleepScore);
+    if (sleepScore != null && sleepScore >= 0 && sleepScore <= 100) e.sleepScore = Math.round(sleepScore);
     if (typeof raw.note === 'string' && raw.note.trim()) e.note = raw.note.trim().slice(0, 280);
     Object.keys(raw).forEach((k) => {
       if (k === 'date' || ENTRY_FIELDS.includes(k)) return;
@@ -392,6 +396,8 @@
     if (e.kcal != null) parts.push(`${e.kcal} kcal`);
     if (e.training) parts.push(e.training);
     if (e.mood != null) parts.push(`${e.mood}/5`);
+    if (e.sleep != null) parts.push(`${e.sleep} h snu`);
+    if (e.sleepScore != null) parts.push(`sen ${e.sleepScore}/100`);
     if (!parts.length && e.note) parts.push('notatka');
     return parts.length ? `log: ${date} (${parts.join(', ')})` : `log: ${date}`;
   }
@@ -476,6 +482,9 @@
         if (plan[wd] && r[4] < 0.9) e.training = plan[wd];
         const mood = 3.4 + (r[5] - 0.5) * 2.2 + (e.training ? 0.5 : 0) - (binge ? 0.3 : 0);
         e.mood = U.clamp(Math.round(mood), 2, 5);
+        // Derived from the day's existing draws, so adding sleep didn't reshuffle the other fields.
+        e.sleep = Math.round((6.1 + r[5] * 2 + (r[1] - 0.5) * 0.6) * 4) / 4;
+        e.sleepScore = U.clamp(Math.round(52 + r[5] * 38 + (r[3] - 0.5) * 10), 40, 96);
       }
       entries.push(e);
     }

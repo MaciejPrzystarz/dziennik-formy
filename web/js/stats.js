@@ -13,6 +13,9 @@
     { emoji: '🤩', label: 'Petarda' }
   ];
 
+  // A night of at least this many hours counts as enough sleep.
+  const SLEEP_GOOD = 7;
+
   const byDate = (a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0);
   const sorted = (entries) => entries.slice().sort(byDate);
   const hasWeight = (e) => typeof e.weight === 'number';
@@ -162,6 +165,8 @@
       const ws = logged.filter(hasWeight).map((e) => e.weight);
       const ks = logged.filter((e) => typeof e.kcal === 'number').map((e) => e.kcal);
       const ms = logged.filter((e) => typeof e.mood === 'number').map((e) => e.mood);
+      const ss = logged.filter((e) => typeof e.sleep === 'number').map((e) => e.sleep);
+      const sq = logged.filter((e) => typeof e.sleepScore === 'number').map((e) => e.sleepScore);
       const avg = ws.length ? mean(ws) : null;
       out.push({
         start,
@@ -172,6 +177,8 @@
         delta: avg != null && prevAvg != null ? avg - prevAvg : null,
         kcal: ks.length ? { avg: mean(ks), count: ks.length } : null,
         mood: ms.length ? { avg: mean(ms), count: ms.length } : null,
+        sleep: ss.length ? { avg: mean(ss), count: ss.length } : null,
+        sleepScore: sq.length ? { avg: mean(sq), count: sq.length } : null,
         trainings: logged.filter(isTraining)
       });
       if (avg != null) prevAvg = avg;
@@ -204,6 +211,16 @@
     return { avg: recent.reduce((s, e) => s + e.mood, 0) / recent.length, count: recent.length };
   }
 
+  // Last 7 days of sleep: mean hours and mean score, each over the days that have it.
+  function sleepSummary(entries, today) {
+    const recent = lastDays(entries, today, 7);
+    const hours = recent.filter((e) => typeof e.sleep === 'number').map((e) => e.sleep);
+    const scores = recent.filter((e) => typeof e.sleepScore === 'number').map((e) => e.sleepScore);
+    if (!hours.length && !scores.length) return null;
+    const mean = (xs) => (xs.length ? xs.reduce((s, x) => s + x, 0) / xs.length : null);
+    return { hours: mean(hours), score: mean(scores) };
+  }
+
   function longestRun(dates) {
     let best = 0;
     let run = 0;
@@ -225,8 +242,51 @@
     return Math.max(0, ...perWeek.values());
   }
 
+  // Longest run of consecutive calendar weeks that each hit the weekly training target.
+  function fullWeeksRun(entries, target) {
+    if (!(target > 0)) return 0;
+    const perWeek = new Map();
+    entries.filter(isTraining).forEach((e) => {
+      const w = U.weekStart(e.date);
+      perWeek.set(w, (perWeek.get(w) || 0) + 1);
+    });
+    const full = [...perWeek.keys()].filter((w) => perWeek.get(w) >= target).sort();
+    let best = 0;
+    let run = 0;
+    full.forEach((w, i) => {
+      run = i && U.diffDays(full[i - 1], w) === 7 ? run + 1 : 1;
+      best = Math.max(best, run);
+    });
+    return best;
+  }
+
+  // Saturday and Sunday of the same weekend both within the calorie target.
+  function weekendOnTarget(entries, target) {
+    const ok = new Set(entries.filter((e) => kcalState(e.kcal, target) === 'ok').map((e) => e.date));
+    return [...ok].some((d) => U.weekdayIndex(d) === 5 && ok.has(U.addDays(d, 1)));
+  }
+
+  // An entry after at least a week without any.
+  function cameBack(entries) {
+    const dates = sorted(entries).map((e) => e.date);
+    return dates.some((d, i) => i > 0 && U.diffDays(dates[i - 1], d) >= 8);
+  }
+
+  // Largest lead of the 7-day average over the plan, in kg (positive = ahead of plan). The first
+  // week doesn't count: a start weight set too high would hand out the badge on day one.
+  function bestPlanLead(entries, settings) {
+    const from = U.addDays(settings.startDate, 7);
+    let best = 0;
+    movingAverage(entries).forEach((avg, day) => {
+      if (day >= from) best = Math.max(best, planWeightAt(settings, day) - avg);
+    });
+    return best;
+  }
+
   function badges(entries, settings, today, prog) {
     const s = settings;
+    const all = sorted(entries).filter((e) => e.date <= today);
+    const trained = new Set(all.filter(isTraining).map((e) => e.training));
     const c = {
       count: entries.length,
       lost: prog.trend == null ? 0 : prog.lost,
@@ -235,20 +295,40 @@
       bestStreak: streaks(entries, today).best,
       kcalRun: longestRun(sorted(entries).filter((e) => kcalState(e.kcal, s.kcalTarget) === 'ok').map((e) => e.date)),
       bestWeek: bestWeek(entries),
-      trainings: entries.filter(isTraining).length
+      trainings: entries.filter(isTraining).length,
+      sleepRun: longestRun(all.filter((e) => typeof e.sleep === 'number' && e.sleep >= SLEEP_GOOD).map((e) => e.date)),
+      bestSleepScore: Math.max(0, ...all.filter((e) => typeof e.sleepScore === 'number').map((e) => e.sleepScore)),
+      petardy: all.filter((e) => e.mood === 5).length,
+      allTypes: s.trainings.length > 1 && s.trainings.every((t) => trained.has(t)),
+      fullWeeks: fullWeeksRun(all, s.weeklyTrainings),
+      weekend: weekendOnTarget(all, s.kcalTarget),
+      comeback: cameBack(all),
+      planLead: bestPlanLead(all, s),
+      notes: all.filter((e) => e.note).length
     };
     const list = [
       { id: 'first', mark: '1', color: 'steel', title: 'Pierwszy wpis', desc: 'Pierwszy dzień w dzienniku', ok: c.count >= 1 },
       { id: 'kg1', mark: U.MINUS + '1', color: 'red', title: 'Minus 1 kg', desc: 'Średnia z 7 dni 1 kg poniżej startu', ok: c.lost >= 1 },
+      { id: 'comeback', mark: '↩', color: 'steel', title: 'Powrót', desc: 'Wpis po co najmniej tygodniu przerwy. Liczy się, że wracasz', ok: c.comeback },
       { id: 'streak7', mark: '7', color: 'blue', title: 'Tydzień z rzędu', desc: '7 dni z wpisem bez przerwy', ok: c.bestStreak >= 7 },
       { id: 'kcal7', mark: 'kcal', color: 'green', title: 'Tydzień w kaloriach', desc: '7 dni z rzędu w celu kalorycznym', ok: c.kcalRun >= 7 },
+      { id: 'weekend', mark: 'S+N', color: 'yellow', title: 'Weekend w ryzach', desc: 'Sobota i niedziela tego samego weekendu w celu kalorycznym', ok: c.weekend },
       { id: 'week', mark: `${s.weeklyTrainings}/${s.weeklyTrainings}`, color: 'yellow', title: 'Pełny tydzień', desc: 'Wszystkie treningi zaplanowane na tydzień', ok: s.weeklyTrainings > 0 && c.bestWeek >= s.weeklyTrainings },
+      { id: 'sleep7', mark: 'zZz', color: 'blue', title: 'Wyspany tydzień', desc: `7 nocy z rzędu po ${SLEEP_GOOD} h snu lub więcej`, ok: c.sleepRun >= 7 },
+      { id: 'sleep90', mark: '90', color: 'white', title: 'Sen jak dziecko', desc: 'Ocena snu 90/100 lub wyżej', ok: c.bestSleepScore >= 90 },
+      { id: 'allTypes', mark: 'ALL', color: 'green', title: 'Wszechstronny', desc: 'Każdy rodzaj treningu z ustawień zrobiony co najmniej raz', ok: c.allTypes },
+      { id: 'petarda', mark: '5×', color: 'red', title: 'Petarda', desc: 'Pięć dni z samopoczuciem „petarda”', ok: c.petardy >= 5 },
       { id: 'kg3', mark: U.MINUS + '3', color: 'blue', title: 'Minus 3 kg', desc: 'Średnia z 7 dni 3 kg poniżej startu', ok: c.lost >= 3 },
+      { id: 'ahead', mark: '▼1', color: 'green', title: 'Przed planem', desc: 'Średnia z 7 dni 1 kg poniżej planu', ok: c.planLead >= 1 },
       { id: 'half', mark: '½', color: 'yellow', title: 'Połowa drogi', desc: 'Połowa kilogramów do celu', ok: c.ratio >= 0.5 },
       { id: 't10', mark: '10', color: 'green', title: '10 treningów', desc: '10 zapisanych treningów', ok: c.trainings >= 10 },
+      { id: 'notes', mark: '✎', color: 'steel', title: 'Kronikarz', desc: '20 wpisów z notatką', ok: c.notes >= 20 },
+      { id: 'weeks3', mark: '3×', color: 'blue', title: 'Trzy pełne tygodnie', desc: 'Trzy tygodnie z rzędu ze wszystkimi treningami', ok: c.fullWeeks >= 3 },
       { id: 'streak30', mark: '30', color: 'red', title: 'Miesiąc z rzędu', desc: '30 dni z wpisem bez przerwy', ok: c.bestStreak >= 30 },
       { id: 'kg5', mark: U.MINUS + '5', color: 'green', title: 'Minus 5 kg', desc: 'Średnia z 7 dni 5 kg poniżej startu', ok: c.lost >= 5 },
       { id: 't50', mark: '50', color: 'white', title: '50 treningów', desc: '50 zapisanych treningów', ok: c.trainings >= 50 },
+      { id: 'streak100', mark: '100', color: 'yellow', title: 'Setka z rzędu', desc: '100 dni z wpisem bez przerwy', ok: c.bestStreak >= 100 },
+      { id: 't100', mark: '100', color: 'red', title: '100 treningów', desc: '100 zapisanych treningów', ok: c.trainings >= 100 },
       { id: 'goal', mark: U.fmtInt(s.targetWeight), color: 'red', title: 'Cel', desc: `Średnia z 7 dni ${U.fmt1(s.targetWeight)} kg`, ok: c.goalReached }
     ];
     return list.map((b) => Object.assign(b, { unlocked: !!b.ok }));
@@ -290,9 +370,9 @@
   }
 
   DF.stats = {
-    MOODS, byDate, sorted, isTraining,
+    MOODS, SLEEP_GOOD, byDate, sorted, isTraining,
     weightEntries, latestWeight, minWeight, movingAverage, trendWeight, slope, planWeightAt,
-    progress, plates, eta, streaks, weekSummary, weeks, kcalState, kcalSummary, moodSummary,
+    progress, plates, eta, streaks, weekSummary, weeks, kcalState, kcalSummary, moodSummary, sleepSummary,
     badges, isNewLow, coachMessage
   };
 })(window.DF = window.DF || {});

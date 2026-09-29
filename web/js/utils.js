@@ -78,6 +78,9 @@
     return String(Math.round(n * 100) / 100).replace('.', ',');
   }
 
+  // Hours of sleep: "7,5", "8", "6,75".
+  const fmtHours = (n) => String(Math.round(n * 100) / 100).replace('.', ',');
+
   function fmtDay(key) {
     const d = fromKey(key);
     return `${WEEKDAYS[weekdayIndex(key)]} ${pad(d.getDate())}.${pad(d.getMonth() + 1)}`;
@@ -148,7 +151,7 @@
   DF.utils = {
     MINUS, WEEKDAYS,
     toKey, fromKey, todayKey, addDays, diffDays, isValidKey, weekdayIndex, weekStart, dayRange,
-    fmt1, fmt2, fmtInt, fmtWeight, signed, weightInput, fmtDay, fmtShort, fmtRange, fmtLong, fmtRelative, monthTitle, monthShort,
+    fmt1, fmt2, fmtInt, fmtWeight, fmtHours, signed, weightInput, fmtDay, fmtShort, fmtRange, fmtLong, fmtRelative, monthTitle, monthShort,
     parseNumber, plural, escapeHtml, clamp
   };
 })(window.DF = window.DF || {});

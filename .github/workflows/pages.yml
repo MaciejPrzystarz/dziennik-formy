@@ -1,6 +1,6 @@
 # Publikuje folder web/ na GitHub Pages przy każdej zmianie aplikacji.
 # Wpisy (data/health.json) nie są publikowane: aplikacja czyta je z repo przez GitHub API.
-# Najpierw: Settings -> Pages -> Build and deployment -> Source: GitHub Actions.
+# Pages włącza się sam (enablement: true); ręcznie: Settings -> Pages -> Source: GitHub Actions.
 name: Pages
 
 on:
@@ -27,6 +27,8 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: actions/configure-pages@v6
+        with:
+          enablement: true
       - uses: actions/upload-pages-artifact@v5
         with:
           path: web

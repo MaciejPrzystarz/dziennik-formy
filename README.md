@@ -1,6 +1,6 @@
 # Dziennik formy
 
-Codzienne wpisy: waga, kalorie, trening, samopoczucie. Statyczna aplikacja webowa (HTML, CSS, JS, bez backendu).
+Codzienne wpisy: waga, kalorie, makro, trening, samopoczucie, sen. Statyczna aplikacja webowa (HTML, CSS, JS, bez backendu).
 Dane leżą w `data/health.json` w tym repozytorium. Wpis można dodać w aplikacji albo napisać Claude'owi w czacie:
 obie drogi zmieniają ten sam plik.
 
@@ -13,8 +13,10 @@ web/                          aplikacja (tylko to publikuje GitHub Pages)
   vendor/chart.umd.min.js     Chart.js 4.5.1
   config.js                   owner/repo z danymi (MaciejPrzystarz/dziennik-formy)
 data/health.json              dane, jedyne źródło prawdy
+tests/                        testy obliczeń i formatu danych (index.html w przeglądarce, run.mjs w Node)
 CLAUDE.md                     zasady edycji danych dla Claude'a
 .github/workflows/pages.yml   deploy web/ na GitHub Pages
+.github/workflows/tests.yml   testy przy każdej zmianie w web/js/ i tests/
 ```
 
 ## Uruchomienie lokalne (IntelliJ)
@@ -64,17 +66,18 @@ z tego samego dnia się nie nadpisują. Po powrocie do karty dane odświeżają 
 
 ```json
 {
-  "settings": {"name": "Maciej", "startDate": "2026-09-28", "startWeight": 86, "targetWeight": 78,
-               "targetDate": "2027-03-31", "kcalTarget": 2450, "weeklyTrainings": 4,
+  "settings": {"name": "Maciej", "startDate": "2026-09-28", "startWeight": 86.5, "targetWeight": 78,
+               "targetDate": "2027-03-31", "kcalTarget": 2450, "proteinTarget": 160, "weeklyTrainings": 4,
                "trainings": ["Upper A", "Lower", "Upper B", "Rower"]},
   "entries": [
-    {"date": "2026-09-28", "weight": 84.2, "kcal": 2450, "training": "Upper A", "mood": 4, "sleep": 7.5, "sleepScore": 82, "note": "..."}
+    {"date": "2026-09-28", "weight": 84.2, "kcal": 2450, "protein": 160, "fat": 70, "carbs": 290, "training": "Upper A", "mood": 4, "sleep": 7.5, "sleepScore": 82, "note": "..."}
   ]
 }
 ```
 
 Jeden wpis na dzień. Wszystkie pola poza `date` są opcjonalne. `mood`: 1 źle, 2 słabo, 3 OK, 4 dobrze, 5 petarda.
-`sleep`: godziny snu (np. 7.5), `sleepScore`: ocena snu 0–100.
+`sleep`: godziny snu (np. 7.5), `sleepScore`: ocena snu 0–100. `protein`, `fat`, `carbs`: gramy białka, tłuszczów
+i węglowodanów. Cele makro (`proteinTarget`, `fatTarget`, `carbsTarget`) są opcjonalne.
 
 ## Jak liczone są wskaźniki
 
@@ -83,4 +86,13 @@ Jeden wpis na dzień. Wszystkie pola poza `date` są opcjonalne. `mood`: 1 źle,
 - Tempo: nachylenie wagi z ostatnich 3 tygodni. Prognoza: data osiągnięcia celu przy tym tempie.
 - Kalorie „w celu”: od 85% do 105% `kcalTarget`; powyżej 105% dzień jest „ponad cel”.
 - Sen: 7 h i więcej to noc „wystarczająca” (niebieski słupek), mniej to szary. Ocena snu ma osobny wykres 0–100.
+- Makro: wykres pokazuje kalorie z każdego makro (białko i węgle 4 kcal/g, tłuszcze 9). Gdy w formularzu są wszystkie
+  trzy, a pole kalorii jest puste, kalorie uzupełniają się same.
+- Zależności: porównania z ostatnich 90 dni (sen a samopoczucie i jedzenie, trening a samopoczucie i sen, weekend
+  a kalorie). Każde pojawia się, gdy obie grupy mają co najmniej 4 dni. Sen z danego dnia to noc przed nim.
 - Skrót klawiszowy `n`: nowy wpis.
+
+## Testy
+
+Otwórz `tests/index.html` tak jak aplikację (IntelliJ: Open In → Browser) albo uruchom `node tests/run.mjs`.
+GitHub Actions robi to samo przy każdym pushu zmieniającym `web/js/` lub `tests/`.

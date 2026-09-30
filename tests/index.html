@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Testy: Dziennik formy</title>
+  <style>
+    :root { color-scheme: dark; --bg: #07051A; --ink: #F4F2FF; --muted: #A29BCB; --ok: #7FE2FF; --bad: #FF6F88; --rule: #251E47; }
+    body { margin: 0; padding: 24px 16px 48px; background: var(--bg); color: var(--ink); font: 15px/1.5 system-ui, sans-serif; }
+    main { max-width: 820px; margin: 0 auto; }
+    h1 { margin: 0 0 4px; font-size: 24px; }
+    #summary { margin: 0 0 18px; font-weight: 600; }
+    #summary.ok { color: var(--ok); }
+    #summary.bad { color: var(--bad); }
+    ol { margin: 0; padding: 0; list-style: none; }
+    li { padding: 6px 0; border-bottom: 1px solid var(--rule); }
+    li.ok::before { content: '✓ '; color: var(--ok); }
+    li.bad::before { content: '✗ '; color: var(--bad); }
+    pre { margin: 6px 0 0; padding: 10px; overflow-x: auto; background: #110C27; color: var(--bad); font-size: 13px; white-space: pre-wrap; }
+    .hint { color: var(--muted); font-size: 14px; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Testy</h1>
+    <p class="hint">Te same testy uruchamia GitHub Actions (<code>node tests/run.mjs</code>).</p>
+    <p id="summary">Uruchamiam…</p>
+    <ol id="results"></ol>
+  </main>
+
+  <script src="../web/js/utils.js"></script>
+  <script src="../web/js/stats.js"></script>
+  <script src="../web/js/store.js"></script>
+  <script src="harness.js"></script>
+  <script src="utils.test.js"></script>
+  <script src="stats.test.js"></script>
+  <script src="store.test.js"></script>
+  <script>
+    (function () {
+      const r = DFTest.run();
+      const summary = document.getElementById('summary');
+      summary.textContent = r.failed
+        ? `${r.failed} z ${r.results.length} nie przechodzi`
+        : `Wszystkie ${r.results.length} przechodzą`;
+      summary.className = r.failed ? 'bad' : 'ok';
+      document.title = `${r.failed ? '✗' : '✓'} Testy: Dziennik formy`;
+      const list = document.getElementById('results');
+      // Failures first, so they don't hide in a long list.
+      r.results.slice().sort((a, b) => a.ok - b.ok).forEach((t) => {
+        const li = document.createElement('li');
+        li.className = t.ok ? 'ok' : 'bad';
+        li.textContent = t.name;
+        if (!t.ok) {
+          const pre = document.createElement('pre');
+          pre.textContent = t.error;
+          li.append(pre);
+        }
+        list.append(li);
+      });
+      window.testResults = r;
+    })();
+  </script>
+</body>
+</html>

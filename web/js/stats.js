@@ -16,6 +16,21 @@
   // A night of at least this many hours counts as enough sleep.
   const SLEEP_GOOD = 7;
 
+  // Macros in grams. `short` is the Polish letter used in labels and commit messages (B/T/W).
+  const MACROS = Object.freeze([
+    { key: 'protein', short: 'B', label: 'Białko', kcal: 4 },
+    { key: 'fat', short: 'T', label: 'Tłuszcze', kcal: 9 },
+    { key: 'carbs', short: 'W', label: 'Węgle', kcal: 4 }
+  ]);
+
+  const hasMacros = (e) => MACROS.some(({ key }) => typeof e[key] === 'number');
+
+  // Calories implied by the macros, or null unless all three are known.
+  function macroKcal(e) {
+    if (!MACROS.every(({ key }) => typeof e[key] === 'number')) return null;
+    return MACROS.reduce((s, m) => s + e[m.key] * m.kcal, 0);
+  }
+
   const byDate = (a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0);
   const sorted = (entries) => entries.slice().sort(byDate);
   const hasWeight = (e) => typeof e.weight === 'number';
@@ -167,6 +182,7 @@
       const ms = logged.filter((e) => typeof e.mood === 'number').map((e) => e.mood);
       const ss = logged.filter((e) => typeof e.sleep === 'number').map((e) => e.sleep);
       const sq = logged.filter((e) => typeof e.sleepScore === 'number').map((e) => e.sleepScore);
+      const macros = macroMeans(logged);
       const avg = ws.length ? mean(ws) : null;
       out.push({
         start,
@@ -179,6 +195,7 @@
         mood: ms.length ? { avg: mean(ms), count: ms.length } : null,
         sleep: ss.length ? { avg: mean(ss), count: ss.length } : null,
         sleepScore: sq.length ? { avg: mean(sq), count: sq.length } : null,
+        macros,
         trainings: logged.filter(isTraining)
       });
       if (avg != null) prevAvg = avg;
@@ -218,7 +235,92 @@
     const scores = recent.filter((e) => typeof e.sleepScore === 'number').map((e) => e.sleepScore);
     if (!hours.length && !scores.length) return null;
     const mean = (xs) => (xs.length ? xs.reduce((s, x) => s + x, 0) / xs.length : null);
-    return { hours: mean(hours), score: mean(scores) };
+    return { hours: mean(hours), score: mean(scores), nights: hours.length };
+  }
+
+  // Mean grams of each macro over the entries that have it: {protein: {avg, count}, ...} or null.
+  function macroMeans(entries) {
+    const logged = entries.filter(hasMacros);
+    if (!logged.length) return null;
+    const out = { days: logged.length };
+    MACROS.forEach(({ key }) => {
+      const xs = logged.filter((e) => typeof e[key] === 'number').map((e) => e[key]);
+      out[key] = xs.length ? { avg: xs.reduce((s, x) => s + x, 0) / xs.length, count: xs.length } : null;
+    });
+    return out;
+  }
+
+  function macroSummary(entries, today) {
+    return macroMeans(lastDays(entries, today, 7));
+  }
+
+  // ---------- patterns in the user's own data ----------
+
+  const INSIGHT_DAYS = 90; // recent habits matter more than those from half a year ago
+  const INSIGHT_MIN = 4; // days needed in each group before a comparison is shown
+
+  // Mean of `value` over entries split by `inA`. Only entries where `value` is a number count.
+  function split(entries, inA, value) {
+    const a = [];
+    const b = [];
+    entries.forEach((e) => {
+      const v = value(e);
+      if (typeof v !== 'number') return;
+      (inA(e) ? a : b).push(v);
+    });
+    const mean = (xs) => (xs.length ? xs.reduce((s, x) => s + x, 0) / xs.length : null);
+    return { a: { avg: mean(a), n: a.length }, b: { avg: mean(b), n: b.length } };
+  }
+
+  // Comparisons the diary can answer about itself. Each one is `ready` once both groups have
+  // INSIGHT_MIN days; `diff` is a − b, `strong` when the gap is worth acting on.
+  // Sleep on a date is the night before it, so it is compared with the same day's mood and food.
+  function insights(entries, today) {
+    const from = U.addDays(today, -(INSIGHT_DAYS - 1));
+    const recent = sorted(entries).filter((e) => e.date >= from && e.date <= today);
+    const byDay = new Map(recent.map((e) => [e.date, e]));
+    const hasSleep = (e) => typeof e.sleep === 'number';
+    const shortNight = (e) => e.sleep < SLEEP_GOOD;
+    const withSleep = recent.filter(hasSleep);
+    const logged = recent.filter((e) => isTraining(e) || typeof e.mood === 'number' || typeof e.weight === 'number' || typeof e.kcal === 'number');
+    const weekend = (e) => U.weekdayIndex(e.date) >= 5;
+    // Sleep of the night after a day: the next day's entry.
+    const nightAfter = recent
+      .map((e) => ({ day: e, next: byDay.get(U.addDays(e.date, 1)) }))
+      .filter((p) => p.next && hasSleep(p.next));
+
+    const defs = [
+      {
+        id: 'sleep-mood', kind: 'mood', title: 'Sen a samopoczucie',
+        labelA: `po nocy poniżej ${SLEEP_GOOD} h`, labelB: `po ${SLEEP_GOOD} h i więcej`, threshold: 0.4,
+        ...split(withSleep, shortNight, (e) => e.mood)
+      },
+      {
+        id: 'sleep-kcal', kind: 'kcal', title: 'Sen a jedzenie',
+        labelA: `po nocy poniżej ${SLEEP_GOOD} h`, labelB: `po ${SLEEP_GOOD} h i więcej`, threshold: 150,
+        ...split(withSleep, shortNight, (e) => e.kcal)
+      },
+      {
+        id: 'training-mood', kind: 'mood', title: 'Trening a samopoczucie',
+        labelA: 'w dni z treningiem', labelB: 'w dni bez treningu', threshold: 0.4,
+        ...split(logged, isTraining, (e) => e.mood)
+      },
+      {
+        id: 'training-sleep', kind: 'hours', title: 'Trening a sen',
+        labelA: 'w noc po treningu', labelB: 'w noc po dniu bez treningu', threshold: 0.3,
+        ...split(nightAfter, (p) => isTraining(p.day), (p) => p.next.sleep)
+      },
+      {
+        id: 'weekend-kcal', kind: 'kcal', title: 'Weekend a kalorie',
+        labelA: 'w sobotę i niedzielę', labelB: 'od poniedziałku do piątku', threshold: 150,
+        ...split(recent, weekend, (e) => e.kcal)
+      }
+    ];
+    return defs.map((d) => {
+      const ready = d.a.n >= INSIGHT_MIN && d.b.n >= INSIGHT_MIN;
+      const diff = ready ? d.a.avg - d.b.avg : null;
+      return Object.assign(d, { ready, diff, strong: ready && Math.abs(diff) >= d.threshold });
+    });
   }
 
   function longestRun(dates) {
@@ -361,6 +463,13 @@
     if (c.kcal && c.kcal.logged >= 4 && c.kcal.avg > s.kcalTarget * 1.05) {
       return `Średnia kalorii z ostatnich 7 dni jest ${U.fmtInt(c.kcal.avg - s.kcalTarget)} kcal nad celem.`;
     }
+    if (c.sleep && c.sleep.nights >= 4 && c.sleep.hours < SLEEP_GOOD - 0.5) {
+      return `Średnio ${U.fmt1(c.sleep.hours)} h snu z ostatnich nocy. Krótki sen podkręca głód i osłabia trening, więc to najtańsza rzecz do poprawy.`;
+    }
+    const p = c.macros && c.macros.protein;
+    if (s.proteinTarget && p && p.count >= 4 && p.avg < s.proteinTarget * 0.85) {
+      return `Białko średnio ${U.fmtInt(p.avg)} g przy celu ${U.fmtInt(s.proteinTarget)} g. Na redukcji to ono chroni mięśnie.`;
+    }
     if (s.weeklyTrainings > 0 && c.week.trainings.length >= s.weeklyTrainings) {
       return 'Wszystkie treningi z tego tygodnia zrobione.';
     }
@@ -370,9 +479,9 @@
   }
 
   DF.stats = {
-    MOODS, SLEEP_GOOD, byDate, sorted, isTraining,
+    MOODS, SLEEP_GOOD, MACROS, INSIGHT_MIN, byDate, sorted, isTraining, hasMacros, macroKcal,
     weightEntries, latestWeight, minWeight, movingAverage, trendWeight, slope, planWeightAt,
     progress, plates, eta, streaks, weekSummary, weeks, kcalState, kcalSummary, moodSummary, sleepSummary,
-    badges, isNewLow, coachMessage
+    macroMeans, macroSummary, insights, badges, isNewLow, coachMessage
   };
 })(window.DF = window.DF || {});

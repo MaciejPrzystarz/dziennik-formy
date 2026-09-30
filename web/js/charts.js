@@ -1,5 +1,5 @@
-/* Dziennik formy: weight, calorie and sleep charts (Chart.js). Colors come from the CSS variables, so the
-   charts follow light and dark mode. */
+/* Dziennik formy: weight, calorie and sleep charts (Chart.js). Colors come from the CSS variables in styles.css,
+   so the charts match the rest of the page. */
 (function (DF) {
   'use strict';
 
@@ -159,6 +159,72 @@
     }, values.some((v) => v != null));
   }
 
+  // Calories from each macro, stacked, against the calorie target. Stacking works because all
+  // three share one unit (kcal); the tooltip gives the grams.
+  function macro(canvas, vm, range) {
+    const c = colors();
+    const target = vm.settings.kcalTarget;
+    const days = chartDays(vm.entries, range, vm.today);
+    const byDay = new Map(vm.entries.filter(S.hasMacros).map((e) => [e.date, e]));
+    const fill = { protein: c.protein, fat: c.fat, carbs: c.carbs };
+    const series = S.MACROS.map((m) => ({
+      type: 'bar', label: m.label, key: m.key, stack: 'kcal', order: 1,
+      data: days.map((d) => {
+        const e = byDay.get(d);
+        return e && typeof e[m.key] === 'number' ? e[m.key] * m.kcal : null;
+      }),
+      backgroundColor: fill[m.key],
+      borderColor: c.bg,
+      borderWidth: { top: 2, right: 0, bottom: 0, left: 0 },
+      borderSkipped: false,
+      borderRadius: 4,
+      maxBarThickness: 18, categoryPercentage: 0.82, barPercentage: 0.92
+    }));
+    const totals = days.map((d) => {
+      const e = byDay.get(d);
+      return e ? S.MACROS.reduce((s, m) => s + (typeof e[m.key] === 'number' ? e[m.key] * m.kcal : 0), 0) : 0;
+    });
+    const max = Math.max(target, ...totals);
+
+    const options = base(c, days);
+    options.scales.x.stacked = true;
+    options.scales.y.stacked = true;
+    options.scales.y.beginAtZero = true;
+    options.scales.y.suggestedMax = Math.ceil((max * 1.08) / 500) * 500;
+    options.scales.y.ticks.callback = (v) => U.fmtInt(v);
+    options.scales.y.ticks.maxTicksLimit = 6;
+    options.plugins.tooltip.itemSort = (a, b) => a.datasetIndex - b.datasetIndex;
+    options.plugins.tooltip.callbacks.label = (item) => {
+      if (item.dataset.type === 'line') return ` Cel: ${U.fmtInt(item.parsed.y)} kcal`;
+      const m = S.MACROS.find((x) => x.key === item.dataset.key);
+      return ` ${m.label}: ${U.fmtInt(item.parsed.y / m.kcal)} g (${U.fmtInt(item.parsed.y)} kcal)`;
+    };
+    options.plugins.tooltip.callbacks.footer = (items) => {
+      if (!items.length) return '';
+      const e = byDay.get(days[items[0].dataIndex]);
+      if (!e) return '';
+      const lines = [`Z makro: ${U.fmtInt(totals[items[0].dataIndex])} kcal`];
+      if (typeof e.kcal === 'number') lines.push(`Wpisane kalorie: ${U.fmtInt(e.kcal)}`);
+      return lines;
+    };
+    options.plugins.tooltip.footerColor = c.bg;
+
+    draw(canvas, {
+      type: 'bar',
+      data: {
+        labels: days,
+        datasets: [
+          {
+            type: 'line', label: 'Cel', data: days.map(() => target), borderColor: c.ink2, borderWidth: 1.5,
+            borderDash: [6, 5], pointRadius: 0, pointHoverRadius: 0, pointStyle: 'line', order: 0
+          },
+          ...series
+        ]
+      },
+      options
+    }, totals.some((v) => v > 0));
+  }
+
   // Hours of sleep as bars against the 7 h line. The score gets its own chart below:
   // hours and a 0–100 score never share an axis.
   function sleep(canvas, vm, range) {
@@ -237,7 +303,10 @@
       rule: cssVar('--rule'),
       blue: cssVar('--plate-blue'),
       green: cssVar('--plate-green'),
-      red: cssVar('--plate-red')
+      red: cssVar('--plate-red'),
+      protein: cssVar('--macro-protein'),
+      fat: cssVar('--macro-fat'),
+      carbs: cssVar('--macro-carbs')
     };
   }
 
@@ -248,5 +317,5 @@
     return true;
   }
 
-  DF.charts = { setup, weight, kcal, sleep, sleepScore, chartDays };
+  DF.charts = { setup, weight, kcal, macro, sleep, sleepScore, chartDays };
 })(window.DF = window.DF || {});

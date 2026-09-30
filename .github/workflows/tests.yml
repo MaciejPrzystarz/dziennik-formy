@@ -1,0 +1,26 @@
+# Runs tests/ on every change to the app code or the tests.
+# Public repo: GitHub Actions minutes are free.
+name: Tests
+
+on:
+  push:
+    branches: [main]
+    paths: ['web/js/**', 'tests/**', '.github/workflows/tests.yml']
+  pull_request:
+    paths: ['web/js/**', 'tests/**', '.github/workflows/tests.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      TZ: Europe/Warsaw # dates are local days; the DST tests need the app's real time zone
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+      - run: node tests/run.mjs

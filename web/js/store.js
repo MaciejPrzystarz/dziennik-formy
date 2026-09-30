@@ -15,15 +15,31 @@
   const DEFAULT_SETTINGS = Object.freeze({
     name: 'Maciej',
     startDate: '2026-09-28',
-    startWeight: 86,
+    startWeight: 86.5,
     targetWeight: 78,
     targetDate: '2027-03-31',
     kcalTarget: 2450,
     weeklyTrainings: 4,
     trainings: Object.freeze(['Upper A', 'Lower', 'Upper B', 'Rower'])
   });
-  const SETTING_KEYS = Object.keys(DEFAULT_SETTINGS);
-  const ENTRY_FIELDS = ['weight', 'kcal', 'training', 'mood', 'sleep', 'sleepScore', 'note'];
+  // Macro targets in grams. Optional: without them macros are shown, just not judged.
+  const MACRO_TARGETS = ['proteinTarget', 'fatTarget', 'carbsTarget'];
+  // Key order in the file. The macro targets sit next to the calorie target.
+  const SETTING_KEYS = ['name', 'startDate', 'startWeight', 'targetWeight', 'targetDate', 'kcalTarget',
+    ...MACRO_TARGETS, 'weeklyTrainings', 'trainings'];
+  const ENTRY_FIELDS = ['weight', 'kcal', 'protein', 'fat', 'carbs', 'training', 'mood', 'sleep', 'sleepScore', 'note'];
+
+  // Valid ranges, shared by the file parser and the forms so both accept the same values.
+  const LIMITS = Object.freeze({
+    weight: [20, 400],
+    kcal: [0, 20000],
+    kcalTarget: [800, 10000],
+    macro: [0, 1000],
+    macroTarget: [1, 1000],
+    weeklyTrainings: [0, 14],
+    sleep: [0, 24],
+    sleepScore: [0, 100]
+  });
 
   class StoreError extends Error {
     constructor(kind, message, status) {
@@ -56,20 +72,25 @@
       const n = U.parseNumber(v);
       return n != null && n >= lo && n <= hi ? n : fallback;
     };
+    const L = LIMITS;
     const out = {
       name: typeof src.name === 'string' ? src.name.trim().slice(0, 40) : d.name,
       startDate: U.isValidKey(src.startDate) ? src.startDate : d.startDate,
-      startWeight: num(src.startWeight, d.startWeight, 20, 400),
-      targetWeight: num(src.targetWeight, d.targetWeight, 20, 400),
+      startWeight: num(src.startWeight, d.startWeight, ...L.weight),
+      targetWeight: num(src.targetWeight, d.targetWeight, ...L.weight),
       targetDate: U.isValidKey(src.targetDate) ? src.targetDate : d.targetDate,
-      kcalTarget: Math.round(num(src.kcalTarget, d.kcalTarget, 500, 20000)),
-      weeklyTrainings: Math.round(num(src.weeklyTrainings, d.weeklyTrainings, 0, 14)),
+      kcalTarget: Math.round(num(src.kcalTarget, d.kcalTarget, ...L.kcalTarget)),
+      weeklyTrainings: Math.round(num(src.weeklyTrainings, d.weeklyTrainings, ...L.weeklyTrainings)),
       trainings: Array.isArray(src.trainings)
         ? [...new Set(src.trainings.filter((t) => typeof t === 'string' && t.trim()).map((t) => t.trim()))]
         : d.trainings.slice()
     };
+    MACRO_TARGETS.forEach((k) => {
+      const n = num(src[k], null, ...L.macroTarget);
+      if (n != null) out[k] = Math.round(n);
+    });
     // Keys this app doesn't know about survive a save untouched.
-    Object.keys(src).forEach((k) => { if (!(k in out)) out[k] = src[k]; });
+    Object.keys(src).forEach((k) => { if (!(k in out) && !MACRO_TARGETS.includes(k)) out[k] = src[k]; });
     return out;
   }
 
@@ -80,6 +101,10 @@
     if (weight != null && weight > 0) e.weight = Math.round(weight * 100) / 100;
     const kcal = U.parseNumber(raw.kcal);
     if (kcal != null && kcal >= 0) e.kcal = Math.round(kcal);
+    DF.stats.MACROS.forEach(({ key }) => {
+      const g = U.parseNumber(raw[key]);
+      if (g != null && g >= LIMITS.macro[0] && g <= LIMITS.macro[1]) e[key] = Math.round(g);
+    });
     if (typeof raw.training === 'string' && raw.training.trim()) e.training = raw.training.trim();
     const mood = U.parseNumber(raw.mood);
     if (mood != null && mood >= 1 && mood <= 5) e.mood = Math.round(mood);
@@ -394,6 +419,7 @@
     const parts = [];
     if (e.weight != null) parts.push(`${e.weight} kg`);
     if (e.kcal != null) parts.push(`${e.kcal} kcal`);
+    DF.stats.MACROS.forEach(({ key, short }) => { if (e[key] != null) parts.push(`${short} ${e[key]} g`); });
     if (e.training) parts.push(e.training);
     if (e.mood != null) parts.push(`${e.mood}/5`);
     if (e.sleep != null) parts.push(`${e.sleep} h snu`);
@@ -431,14 +457,22 @@
     }, `log: usuń ${date}`);
   }
 
+  // A patch value of null removes that setting (used for cleared macro targets).
   function saveSettings(patch) {
     return commit((data) => {
-      data.settings = normalizeSettings(Object.assign({}, data.settings, patch));
+      const merged = Object.assign({}, data.settings, patch);
+      Object.keys(merged).forEach((k) => { if (merged[k] === null) delete merged[k]; });
+      data.settings = normalizeSettings(merged);
       return data;
-    }, (next) => {
-      const s = next.settings;
-      return `settings: cel ${s.targetWeight} kg do ${s.targetDate}, ${s.kcalTarget} kcal, ${s.weeklyTrainings} treningi/tydz.`;
-    });
+    }, (next) => settingsMessage(next.settings));
+  }
+
+  function settingsMessage(s) {
+    const macros = DF.stats.MACROS
+      .filter(({ key }) => s[`${key}Target`] != null)
+      .map(({ key, short }) => `${short} ${s[`${key}Target`]} g`);
+    return `settings: cel ${s.targetWeight} kg do ${s.targetDate}, ${s.kcalTarget} kcal` +
+      `${macros.length ? `, ${macros.join(', ')}` : ''}, ${s.weeklyTrainings} treningi/tydz.`;
   }
 
   // ---------- demo ----------
@@ -461,7 +495,8 @@
     const DAYS = 70;
     const start = U.addDays(end, -(DAYS - 1));
     const settings = normalizeSettings(Object.assign({}, DEFAULT_SETTINGS, {
-      startDate: start, startWeight: 85, targetDate: U.addDays(start, 184)
+      startDate: start, startWeight: 85, targetDate: U.addDays(start, 184),
+      proteinTarget: 160, fatTarget: 70, carbsTarget: 290
     }));
     const missed = new Set([9, 23, 24, 41, 57]);
     const plan = { 0: 'Upper A', 2: 'Lower', 3: 'Upper B', 6: 'Rower' };
@@ -485,6 +520,11 @@
         // Derived from the day's existing draws, so adding sleep didn't reshuffle the other fields.
         e.sleep = Math.round((6.1 + r[5] * 2 + (r[1] - 0.5) * 0.6) * 4) / 4;
         e.sleepScore = U.clamp(Math.round(52 + r[5] * 38 + (r[3] - 0.5) * 10), 40, 96);
+        if (r[0] > 0.18) { // macros on most days, carbs fill the rest of the calories
+          e.protein = Math.round(140 + r[4] * 45 - (binge ? 15 : 0));
+          e.fat = Math.round(58 + r[2] * 30 + (binge ? 25 : 0));
+          e.carbs = Math.max(80, Math.round((e.kcal - 4 * e.protein - 9 * e.fat) / 4));
+        }
       }
       entries.push(e);
     }
@@ -515,9 +555,9 @@
   }
 
   DF.store = {
-    DEFAULT_SETTINGS, ENTRY_FIELDS, StoreError, state,
+    DEFAULT_SETTINGS, ENTRY_FIELDS, MACRO_TARGETS, LIMITS, StoreError, state,
     load, canWrite, upsertEntry, deleteEntry, saveSettings, enterDemo, exitDemo,
     getConfig, saveConfig, clearConfig, getToken, setToken, clearToken, fileUrl,
-    normalize, normalizeSettings, cleanEntry, serialize, parse, entryMessage, demoData
+    normalize, normalizeSettings, cleanEntry, serialize, parse, entryMessage, settingsMessage, demoData
   };
 })(window.DF = window.DF || {});

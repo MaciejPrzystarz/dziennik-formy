@@ -139,6 +139,24 @@
             </div>
           </section>
 
+          <section class="block" aria-labelledby="h-macro">
+            <div class="block-head">
+              <h2 id="h-macro">Makro</h2>
+              <p class="block-note" id="macro-note"></p>
+            </div>
+            <div class="legend" aria-hidden="true">
+              <span class="lg"><i class="sw sw-bar" style="--c: var(--macro-protein)"></i>białko</span>
+              <span class="lg"><i class="sw sw-bar" style="--c: var(--macro-fat)"></i>tłuszcze</span>
+              <span class="lg"><i class="sw sw-bar" style="--c: var(--macro-carbs)"></i>węgle</span>
+              <span class="lg"><i class="sw sw-dash" style="--c: var(--ink-2)"></i>cel kalorii</span>
+            </div>
+            <div class="chart-box">
+              <canvas id="chart-macro" role="img" aria-label="Wykres kalorii z białka, tłuszczów i węglowodanów dziennie"></canvas>
+              <p class="chart-empty" hidden>Brak wpisów makro w tym okresie.</p>
+            </div>
+            <p class="caption">Słupek to kalorie z makro: białko i węgle po 4 kcal na gram, tłuszcze 9.</p>
+          </section>
+
           <section class="block" aria-labelledby="h-sleep">
             <div class="block-head">
               <h2 id="h-sleep">Sen</h2>
@@ -169,6 +187,15 @@
             <div class="heatmap" id="heatmap" role="img"></div>
             <p class="caption" id="heat-caption"></p>
             <div class="legend" id="heat-legend"></div>
+          </section>
+
+          <section class="block" aria-labelledby="h-insights">
+            <div class="block-head">
+              <h2 id="h-insights">Zależności</h2>
+              <p class="block-note">ostatnie 90 dni</p>
+            </div>
+            <ul class="insights" id="insights"></ul>
+            <p class="caption" id="insights-caption"></p>
           </section>
 
           <section class="block" aria-labelledby="h-badges">
@@ -255,6 +282,34 @@
             <p class="hint" id="kcal-hint"></p>
           </div>
         </div>
+
+        <fieldset class="field">
+          <legend>Makro</legend>
+          <div class="field-row is-3">
+            <div class="field">
+              <label for="f-protein" class="sub-label">Białko</label>
+              <div class="with-unit is-narrow">
+                <input id="f-protein" name="protein" inputmode="numeric" autocomplete="off" enterkeyhint="next">
+                <span class="unit">g</span>
+              </div>
+            </div>
+            <div class="field">
+              <label for="f-fat" class="sub-label">Tłuszcze</label>
+              <div class="with-unit is-narrow">
+                <input id="f-fat" name="fat" inputmode="numeric" autocomplete="off" enterkeyhint="next">
+                <span class="unit">g</span>
+              </div>
+            </div>
+            <div class="field">
+              <label for="f-carbs" class="sub-label">Węgle</label>
+              <div class="with-unit is-narrow">
+                <input id="f-carbs" name="carbs" inputmode="numeric" autocomplete="off" enterkeyhint="next">
+                <span class="unit">g</span>
+              </div>
+            </div>
+          </div>
+          <p class="hint" id="macro-hint"></p>
+        </fieldset>
 
         <fieldset class="field">
           <legend>Trening</legend>
@@ -363,6 +418,24 @@
               <label for="g-kcal">Kalorie dziennie</label>
               <div class="with-unit"><input id="g-kcal" inputmode="numeric" autocomplete="off"><span class="unit">kcal</span></div>
             </div>
+            <fieldset class="field span-2">
+              <legend>Makro dziennie <small class="legend-note">opcjonalnie</small></legend>
+              <div class="field-row is-3">
+                <div class="field">
+                  <label for="g-protein" class="sub-label">Białko</label>
+                  <div class="with-unit is-narrow"><input id="g-protein" inputmode="numeric" autocomplete="off"><span class="unit">g</span></div>
+                </div>
+                <div class="field">
+                  <label for="g-fat" class="sub-label">Tłuszcze</label>
+                  <div class="with-unit is-narrow"><input id="g-fat" inputmode="numeric" autocomplete="off"><span class="unit">g</span></div>
+                </div>
+                <div class="field">
+                  <label for="g-carbs" class="sub-label">Węgle</label>
+                  <div class="with-unit is-narrow"><input id="g-carbs" inputmode="numeric" autocomplete="off"><span class="unit">g</span></div>
+                </div>
+              </div>
+              <p class="hint" id="g-macro-hint"></p>
+            </fieldset>
             <div class="field">
               <label for="g-weekly">Treningi w tygodniu</label>
               <input id="g-weekly" inputmode="numeric" autocomplete="off">

@@ -48,14 +48,22 @@
     const kcal = S.kcalSummary(entries, today, settings.kcalTarget);
     const mood = S.moodSummary(entries, today);
     const sleep = S.sleepSummary(entries, today);
+    const macros = S.macroSummary(entries, today);
     return {
-      settings, entries, today, prog, latest, slopeDay, plan, planDiff, streak, week, kcal, mood, sleep,
+      settings, entries, today, prog, latest, slopeDay, plan, planDiff, streak, week, kcal, mood, sleep, macros,
       pl: S.plates(prog),
       eta: S.eta(prog.trend, settings.targetWeight, slopeDay, asOf),
       badges: S.badges(entries, settings, today, prog),
+      insights: S.insights(entries, today),
       byDate: new Map(entries.map((e) => [e.date, e])),
-      coach: S.coachMessage({ settings, entries, today, prog, mood, slopeDay, kcal, week, streak, planDiff })
+      coach: S.coachMessage({ settings, entries, today, prog, mood, slopeDay, kcal, week, streak, planDiff, sleep, macros })
     };
+  }
+
+  // "B 160 · T 70 · W 290 g", only the macros that are there.
+  function macroLine(src, fmt = (x) => x) {
+    const parts = S.MACROS.filter(({ key }) => src && src[key] != null).map(({ key, short }) => `${short} ${U.fmtInt(fmt(src[key]))}`);
+    return parts.length ? `${parts.join(' · ')} g` : '';
   }
 
   function trainingColor(name, settings) {
@@ -70,10 +78,23 @@
     if (typeof e.weight === 'number') parts.push(`${U.fmtWeight(e.weight)} kg`);
     if (typeof e.kcal === 'number') parts.push(`${U.fmtInt(e.kcal)} kcal`);
     if (S.isTraining(e)) parts.push(e.training);
+    if (!parts.length && S.hasMacros(e)) parts.push(macroLine(e));
     if (!parts.length && e.mood) parts.push(`samopoczucie ${S.MOODS[e.mood].label.toLowerCase()}`);
     if (!parts.length && typeof e.sleep === 'number') parts.push(`sen ${U.fmtHours(e.sleep)} h`);
     if (!parts.length && typeof e.sleepScore === 'number') parts.push(`sen ${e.sleepScore}/100`);
     if (!parts.length) parts.push('notatka');
+    return parts.join(', ');
+  }
+
+  // Everything logged for a day, for the heatmap caption.
+  function dayDetails(e) {
+    const parts = [S.isTraining(e) ? e.training : 'bez treningu'];
+    if (typeof e.weight === 'number') parts.push(`${U.fmtWeight(e.weight)} kg`);
+    if (typeof e.kcal === 'number') parts.push(`${U.fmtInt(e.kcal)} kcal`);
+    if (S.hasMacros(e)) parts.push(macroLine(e));
+    if (e.mood) parts.push(`samopoczucie ${S.MOODS[e.mood].emoji} ${S.MOODS[e.mood].label.toLowerCase()}`);
+    if (typeof e.sleep === 'number') parts.push(`sen ${U.fmtHours(e.sleep)} h`);
+    if (typeof e.sleepScore === 'number') parts.push(`ocena snu ${e.sleepScore}/100`);
     return parts.join(', ');
   }
 
@@ -93,6 +114,7 @@
     renderCharts(vm);
     renderWeeks(vm);
     renderHeatmap(vm);
+    renderInsights(vm);
     renderBadges(vm);
     renderLog(vm);
   }
@@ -245,6 +267,14 @@
       ? `średnia 7 dni, w celu ${k.ok} z ${k.logged} ${k.logged === 1 ? 'dnia' : 'dni'}`
       : 'brak kalorii z 7 dni';
 
+    const mc = vm.macros;
+    const protein = mc && mc.protein;
+    const proteinValue = protein ? `${U.fmtInt(protein.avg)}<small>g</small>` : '–';
+    const rest = mc ? macroLine({ fat: mc.fat && mc.fat.avg, carbs: mc.carbs && mc.carbs.avg }) : '';
+    const proteinSub = !mc
+      ? 'brak makro z 7 dni'
+      : [s.proteinTarget ? `cel ${U.fmtInt(s.proteinTarget)} g` : 'średnia 7 dni', rest].filter(Boolean).join(', ');
+
     const perWeek = vm.slopeDay != null ? vm.slopeDay * 7 : null;
     const planDays = Math.max(1, U.diffDays(s.startDate, s.targetDate));
     const planWeek = ((s.targetWeight - s.startWeight) / planDays) * 7;
@@ -279,6 +309,11 @@
         <p class="stat-label">Kalorie</p>
         <p class="stat-value${kcalState === 'over' ? ' is-over' : ''}">${kcalValue}</p>
         <p class="stat-sub">${esc(kcalSub)}</p>
+      </div>
+      <div class="stat">
+        <p class="stat-label">Białko</p>
+        <p class="stat-value">${proteinValue}</p>
+        <p class="stat-sub">${esc(proteinSub)}</p>
       </div>
       <div class="stat">
         <p class="stat-label">Tempo</p>
@@ -357,6 +392,9 @@
     if (w.sleep) sleepParts.push(`${U.fmt1(w.sleep.avg)}<small> h</small>`);
     if (w.sleepScore) sleepParts.push(`${U.fmtInt(w.sleepScore.avg)}<small>/100</small>`);
     const sleep = sleepParts.length ? sleepParts.join(' <small>·</small> ') : '<span class="none">–</span>';
+    const macros = w.macros
+      ? esc(macroLine({ protein: w.macros.protein && w.macros.protein.avg, fat: w.macros.fat && w.macros.fat.avg, carbs: w.macros.carbs && w.macros.carbs.avg }))
+      : '<span class="none">–</span>';
     return `<article class="wk${current ? ' is-current' : ''}">` +
       '<div class="wk-top">' +
         `<h3 class="wk-range">${U.fmtRange(w.start, w.end)}${current ? '<span class="wk-tag">ten tydzień</span>' : ''}</h3>` +
@@ -366,6 +404,7 @@
       `<div class="wk-days">${w.days.map((d) => weekDay(d, vm, writable)).join('')}</div>` +
       '<dl class="wk-facts">' +
         `<div><dt>Kalorie</dt><dd>${kcal}</dd></div>` +
+        `<div><dt>Makro</dt><dd title="Białko, tłuszcze, węgle: średnia na dzień">${macros}</dd></div>` +
         `<div><dt>Treningi</dt><dd>${trainings}</dd></div>` +
         `<div><dt>Samopoczucie</dt><dd>${mood}</dd></div>` +
         `<div><dt>Sen</dt><dd>${sleep}</dd></div>` +
@@ -379,6 +418,11 @@
     $$('#range button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.range === String(ui.range))));
     DF.charts.weight($('#chart-weight'), vm, ui.range);
     DF.charts.kcal($('#chart-kcal'), vm, ui.range);
+    DF.charts.macro($('#chart-macro'), vm, ui.range);
+    const s = vm.settings;
+    $('#macro-note').textContent = S.MACROS.some(({ key }) => s[`${key}Target`] != null)
+      ? `cel: ${macroLine({ protein: s.proteinTarget, fat: s.fatTarget, carbs: s.carbsTarget })}`
+      : '';
     DF.charts.sleep($('#chart-sleep'), vm, ui.range);
     DF.charts.sleepScore($('#chart-sleep-score'), vm, ui.range);
   }
@@ -432,6 +476,46 @@
       .map((t) => `<span class="lg"><i class="sw sw-sq t-${trainingColor(t, s)}"></i>${esc(t)}</span>`)
       .concat('<span class="lg"><i class="sw sw-sq is-rest"></i>bez treningu</span>')
       .join('');
+  }
+
+  const INSIGHT_WORDS = {
+    mood: { fmt: (v) => U.fmt1(v), unit: '', subject: 'samopoczucie jest średnio', more: 'wyższe', less: 'niższe', flat: 'Samopoczucie podobne w obu przypadkach.' },
+    kcal: { fmt: (v) => U.fmtInt(v), unit: ' kcal', subject: 'jesz średnio', more: 'więcej', less: 'mniej', flat: 'Kalorie podobne w obu przypadkach.' },
+    hours: { fmt: (v) => U.fmt1(v), unit: ' h', subject: 'śpisz średnio', more: 'dłużej', less: 'krócej', flat: 'Sen podobny w obu przypadkach.' }
+  };
+
+  function insightValue(kind, v) {
+    const w = INSIGHT_WORDS[kind];
+    const emoji = kind === 'mood' ? `<span class="emoji" aria-hidden="true">${S.MOODS[U.clamp(Math.round(v), 1, 5)].emoji}</span>` : '';
+    return `${emoji}${esc(w.fmt(v))}<small>${w.unit}</small>`;
+  }
+
+  function insightItem(it) {
+    const w = INSIGHT_WORDS[it.kind];
+    const days = (n) => `${n} ${U.plural(n, 'dzień', 'dni', 'dni')}`;
+    if (!it.ready) {
+      const need = [[it.labelA, it.a.n], [it.labelB, it.b.n]]
+        .filter(([, n]) => n < S.INSIGHT_MIN)
+        .map(([label, n]) => `${label}: ${n} z ${S.INSIGHT_MIN}`);
+      return `<li class="insight is-pending"><h3>${esc(it.title)}</h3><p>Za mało danych (${esc(need.join(', '))}).</p></li>`;
+    }
+    const text = it.strong
+      ? `${capitalize(it.labelA)} ${w.subject} o ${w.fmt(Math.abs(it.diff))}${w.unit} ${it.diff > 0 ? w.more : w.less} niż ${it.labelB}.`
+      : w.flat;
+    const row = (label, g) => `<div><dt>${esc(label)}</dt><dd>${insightValue(it.kind, g.avg)}</dd><dd class="n">${esc(days(g.n))}</dd></div>`;
+    return `<li class="insight${it.strong ? ' is-strong' : ''}"><h3>${esc(it.title)}</h3><p>${esc(text)}</p>` +
+      `<dl>${row(it.labelA, it.a)}${row(it.labelB, it.b)}</dl></li>`;
+  }
+
+  function renderInsights(vm) {
+    // Strong findings first, then the rest that have data, then the ones still waiting.
+    const rank = (it) => (it.strong ? 0 : it.ready ? 1 : 2);
+    const list = vm.insights.slice().sort((a, b) => rank(a) - rank(b));
+    $('#insights').innerHTML = list.map(insightItem).join('');
+    const ready = list.filter((it) => it.ready).length;
+    $('#insights-caption').textContent = ready
+      ? 'Średnie z Twoich wpisów, nie dowód przyczyny. Im więcej dni, tym pewniejszy wynik.'
+      : `Każde porównanie potrzebuje co najmniej ${S.INSIGHT_MIN} dni w obu grupach. Sen z danego dnia to noc przed nim.`;
   }
 
   function renderBadges(vm) {
@@ -489,9 +573,10 @@
       if (diff < 0) weight += ` <em class="delta is-down" title="Mniej niż w poprzednim pomiarze">▼ ${U.fmtWeight(-diff)}</em>`;
       else if (diff > 0) weight += ` <em class="delta is-up" title="Więcej niż w poprzednim pomiarze">▲ ${U.fmtWeight(diff)}</em>`;
     }
-    const kcal = typeof e.kcal === 'number'
+    const macros = S.hasMacros(e) ? `<small class="log-macro" title="Białko, tłuszcze, węgle">${esc(macroLine(e))}</small>` : '';
+    const kcal = (typeof e.kcal === 'number'
       ? `<span class="kcal-${S.kcalState(e.kcal, s.kcalTarget)}">${U.fmtInt(e.kcal)}<small> kcal</small></span>`
-      : none;
+      : macros ? '' : none) + macros;
     const training = S.isTraining(e)
       ? `<i class="dot t-${trainingColor(e.training, s)}"></i>${esc(e.training)}`
       : '<span class="none">bez treningu</span>';
@@ -678,12 +763,20 @@
     const mood = $('#f-moods [aria-pressed="true"]');
     const sleepRaw = $('#f-sleep').value.trim();
     const sleepScoreRaw = $('#f-sleep-score').value.trim();
+    const macroRaw = {};
+    const macros = {};
+    S.MACROS.forEach(({ key }) => {
+      macroRaw[key] = $(`#f-${key}`).value.trim();
+      macros[key] = U.parseNumber(macroRaw[key]);
+    });
     return {
       date: $('#f-date').value,
       weightRaw,
       kcalRaw,
       sleepRaw,
       sleepScoreRaw,
+      macroRaw,
+      ...macros,
       weight: U.parseNumber(weightRaw),
       kcal: U.parseNumber(kcalRaw),
       training: training ? training.dataset.training : '',
@@ -698,6 +791,7 @@
     const e = { date: v.date };
     if (v.weight != null) e.weight = Math.round(v.weight * 100) / 100;
     if (v.kcal != null) e.kcal = Math.round(v.kcal);
+    S.MACROS.forEach(({ key }) => { if (v[key] != null) e[key] = Math.round(v[key]); });
     if (v.training) e.training = v.training;
     if (v.mood) e.mood = v.mood;
     if (v.sleep != null) e.sleep = Math.round(v.sleep * 100) / 100;
@@ -707,18 +801,26 @@
   }
 
   function validate(v) {
+    const L = store.LIMITS;
+    const out = (n, [lo, hi]) => n != null && (n < lo || n > hi);
+    const range = ([lo, hi]) => `${U.fmtInt(lo)}–${U.fmtInt(hi)}`;
     if (!U.isValidKey(v.date)) return 'Wybierz dzień.';
     if (v.date > U.todayKey()) return 'Nie da się dodać wpisu z przyszłości.';
     if (v.weightRaw && v.weight == null) return 'Waga musi być liczbą, np. 84,2.';
-    if (v.weight != null && (v.weight < 20 || v.weight > 400)) return 'Waga poza zakresem 20–400 kg.';
+    if (out(v.weight, L.weight)) return `Waga poza zakresem ${range(L.weight)} kg.`;
     if (v.kcalRaw && v.kcal == null) return 'Kalorie muszą być liczbą, np. 2450.';
-    if (v.kcal != null && (v.kcal < 0 || v.kcal > 20000)) return 'Kalorie poza zakresem 0–20 000.';
+    if (out(v.kcal, L.kcal)) return `Kalorie poza zakresem ${range(L.kcal)}.`;
+    for (const { key, label } of S.MACROS) {
+      if (v.macroRaw[key] && v[key] == null) return `${label} musi być liczbą gramów, np. 160.`;
+      if (out(v[key], L.macro)) return `${label} poza zakresem ${range(L.macro)} g.`;
+    }
     if (v.sleepRaw && v.sleep == null) return 'Sen musi być liczbą godzin, np. 7,5.';
-    if (v.sleep != null && (v.sleep < 0 || v.sleep > 24)) return 'Sen poza zakresem 0–24 h.';
+    if (out(v.sleep, L.sleep)) return `Sen poza zakresem ${range(L.sleep)} h.`;
     if (v.sleepScoreRaw && v.sleepScore == null) return 'Ocena snu musi być liczbą, np. 82.';
-    if (v.sleepScore != null && (v.sleepScore < 0 || v.sleepScore > 100)) return 'Ocena snu poza zakresem 0–100.';
-    if (v.weight == null && v.kcal == null && !v.training && !v.mood && v.sleep == null && v.sleepScore == null && !v.note) {
-      return 'Wpisz przynajmniej jedną rzecz: wagę, kalorie, trening, samopoczucie, sen albo notatkę.';
+    if (out(v.sleepScore, L.sleepScore)) return `Ocena snu poza zakresem ${range(L.sleepScore)}.`;
+    const noMacros = S.MACROS.every(({ key }) => v[key] == null);
+    if (v.weight == null && v.kcal == null && noMacros && !v.training && !v.mood && v.sleep == null && v.sleepScore == null && !v.note) {
+      return 'Wpisz przynajmniej jedną rzecz: wagę, kalorie, makro, trening, samopoczucie, sen albo notatkę.';
     }
     return null;
   }
@@ -782,6 +884,25 @@
     hint.classList.add(`is-${state}`);
   }
 
+  // Calories implied by the typed macros, and how far they are from the typed calories.
+  function updateMacroHint() {
+    const v = readForm();
+    const hint = $('#macro-hint');
+    const s = ui.vm.settings;
+    const fromMacros = S.macroKcal(v);
+    const goal = macroLine({ protein: s.proteinTarget, fat: s.fatTarget, carbs: s.carbsTarget });
+    if (fromMacros == null) {
+      hint.textContent = goal ? `Cel: ${goal}` : 'Opcjonalnie. Z trzech wartości policzę kalorie.';
+      $('#f-kcal').placeholder = 'np. 2450';
+      return;
+    }
+    $('#f-kcal').placeholder = String(Math.round(fromMacros));
+    const typed = v.kcal;
+    const off = typed != null && typed > 0 ? Math.abs(fromMacros - typed) / typed : 0;
+    hint.textContent = `Z makro wychodzi ${U.fmtInt(fromMacros)} kcal` +
+      (off > 0.1 ? `, a w kaloriach jest ${U.fmtInt(typed)}. Sprawdź, czy wszystko się zgadza.` : typed == null ? '. Puste pole kalorii uzupełni się tą wartością.' : '.');
+  }
+
   // keepTyped: switching to a day without an entry keeps what the user already typed.
   function fillForm(date, keepTyped) {
     const e = ui.vm.byDate.get(date) || null;
@@ -795,6 +916,7 @@
     if (!e && keepTyped) return;
     $('#f-weight').value = e && typeof e.weight === 'number' ? U.weightInput(e.weight) : '';
     $('#f-kcal').value = e && typeof e.kcal === 'number' ? String(e.kcal) : '';
+    S.MACROS.forEach(({ key }) => { $(`#f-${key}`).value = e && typeof e[key] === 'number' ? String(e[key]) : ''; });
     buildTrainingChips(ui.vm.settings, e && e.training);
     pressOnly($('#f-trainings'), (b) => !!e && b.dataset.training === (e.training || ''));
     pressOnly($('#f-moods'), (b) => !!e && Number(b.dataset.mood) === e.mood);
@@ -802,6 +924,7 @@
     $('#f-sleep-score').value = e && typeof e.sleepScore === 'number' ? String(e.sleepScore) : '';
     $('#f-note').value = e && e.note ? e.note : '';
     updateKcalHint();
+    updateMacroHint();
   }
 
   function openEntry(date) {
@@ -846,6 +969,8 @@
     }
     hideFormError();
     const entry = formEntry(v);
+    const fromMacros = S.macroKcal(entry);
+    if (entry.kcal == null && fromMacros != null) entry.kcal = Math.round(fromMacros);
     const btn = $('#btn-save');
     setBusy(true, btn, 'Zapisuję…');
     try {
@@ -912,6 +1037,8 @@
     $('#g-targetDate').value = s.targetDate;
     $('#g-targetWeight').value = U.weightInput(s.targetWeight);
     $('#g-kcal').value = String(s.kcalTarget);
+    S.MACROS.forEach(({ key }) => { $(`#g-${key}`).value = s[`${key}Target`] != null ? String(s[`${key}Target`]) : ''; });
+    updateGoalsMacroHint();
     $('#g-weekly').value = String(s.weeklyTrainings);
     $('#g-trainings').value = s.trainings.join(', ');
     const writable = store.canWrite();
@@ -977,14 +1104,37 @@
     if (ui.vm) render(ui.vm, {});
   }
 
+  // Grams → calories check for the macro targets, so they can be matched to the calorie target.
+  function updateGoalsMacroHint() {
+    const g = {};
+    S.MACROS.forEach(({ key }) => { g[key] = U.parseNumber($(`#g-${key}`).value); });
+    const kcal = S.macroKcal(g);
+    const target = U.parseNumber($('#g-kcal').value);
+    $('#g-macro-hint').textContent = kcal == null
+      ? 'Puste pole znaczy bez celu. Makro i tak będzie na wykresie.'
+      : `Razem ${U.fmtInt(kcal)} kcal${target ? ` przy celu ${U.fmtInt(target)} kcal (${U.signed(kcal - target, U.fmtInt)}).` : '.'}`;
+  }
+
   function validateGoals(g) {
+    const L = store.LIMITS;
+    const inRange = (n, [lo, hi]) => n != null && n >= lo && n <= hi;
     if (!U.isValidKey(g.startDate) || !U.isValidKey(g.targetDate)) return 'Uzupełnij datę startu i termin celu.';
     if (g.targetDate <= g.startDate) return 'Termin celu musi być po dacie startu.';
-    const okWeight = (w) => w != null && w >= 20 && w <= 400;
-    if (!okWeight(g.startWeight) || !okWeight(g.targetWeight)) return 'Wagi muszą być liczbami z zakresu 20–400 kg.';
+    if (!inRange(g.startWeight, L.weight) || !inRange(g.targetWeight, L.weight)) {
+      return `Wagi muszą być liczbami z zakresu ${L.weight[0]}–${L.weight[1]} kg.`;
+    }
     if (g.targetWeight >= g.startWeight) return 'Waga docelowa musi być niższa niż waga na starcie.';
-    if (g.kcalTarget == null || g.kcalTarget < 800 || g.kcalTarget > 10000) return 'Kalorie dziennie: liczba z zakresu 800–10 000.';
-    if (g.weeklyTrainings == null || g.weeklyTrainings < 0 || g.weeklyTrainings > 14) return 'Treningi w tygodniu: liczba od 0 do 14.';
+    if (!inRange(g.kcalTarget, L.kcalTarget)) {
+      return `Kalorie dziennie: liczba z zakresu ${U.fmtInt(L.kcalTarget[0])}–${U.fmtInt(L.kcalTarget[1])}.`;
+    }
+    for (const { key, label } of S.MACROS) {
+      const v = g[`${key}Target`];
+      if (v === undefined) return `${label}: wpisz liczbę gramów albo zostaw puste.`;
+      if (v !== null && !inRange(v, L.macroTarget)) return `${label}: liczba z zakresu ${L.macroTarget[0]}–${U.fmtInt(L.macroTarget[1])} g.`;
+    }
+    if (!inRange(g.weeklyTrainings, L.weeklyTrainings)) {
+      return `Treningi w tygodniu: liczba od ${L.weeklyTrainings[0]} do ${L.weeklyTrainings[1]}.`;
+    }
     if (!g.trainings.length) return 'Podaj przynajmniej jeden rodzaj treningu.';
     if (g.trainings.length > 8) return 'Maksymalnie 8 rodzajów treningu.';
     return null;
@@ -1003,6 +1153,12 @@
       weeklyTrainings: U.parseNumber($('#g-weekly').value),
       trainings: [...new Set($('#g-trainings').value.split(',').map((t) => t.trim()).filter(Boolean))]
     };
+    // null = cleared field (the target is removed), undefined = not a number.
+    S.MACROS.forEach(({ key }) => {
+      const raw = $(`#g-${key}`).value.trim();
+      const n = U.parseNumber(raw);
+      g[`${key}Target`] = !raw ? null : n == null ? undefined : Math.round(n);
+    });
     const error = validateGoals(g);
     if (error) {
       showMsg('#goals-msg', error, true);
@@ -1065,11 +1221,7 @@
       const key = cell.dataset.key;
       const e = ui.vm.byDate.get(key);
       let text = `${U.fmtDay(key)}: brak wpisu.`;
-      if (e) {
-        const parts = [S.isTraining(e) ? e.training : 'bez treningu'];
-        if (e.mood) parts.push(`samopoczucie ${S.MOODS[e.mood].emoji} ${S.MOODS[e.mood].label.toLowerCase()}`);
-        text = `${U.fmtDay(key)}: ${parts.join(', ')}.`;
-      }
+      if (e) text = `${U.fmtDay(key)}: ${dayDetails(e)}.`;
       $('#heat-caption').textContent = text;
       $$('#heatmap .is-picked').forEach((c) => c.classList.remove('is-picked'));
       cell.classList.add('is-picked');
@@ -1096,7 +1248,9 @@
       fillForm(date, dirty);
     }));
     $$('.step').forEach((b) => b.addEventListener('click', () => stepWeight(Number(b.dataset.step))));
-    $('#f-kcal').addEventListener('input', updateKcalHint);
+    $('#f-kcal').addEventListener('input', () => { updateKcalHint(); updateMacroHint(); });
+    S.MACROS.forEach(({ key }) => $(`#f-${key}`).addEventListener('input', updateMacroHint));
+    ['#g-protein', '#g-fat', '#g-carbs', '#g-kcal'].forEach((sel) => $(sel).addEventListener('input', updateGoalsMacroHint));
     $('#f-trainings').addEventListener('click', (ev) => {
       const chip = ev.target.closest('.chip');
       if (!chip) return;
@@ -1141,8 +1295,6 @@
       if (Date.now() - store.state.loadedAt < 20000) return;
       refresh(false);
     });
-
-    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => renderCharts(ui.vm));
   }
 
   async function loadFonts() {

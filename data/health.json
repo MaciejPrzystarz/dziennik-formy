@@ -10,7 +10,7 @@
     "trainings": ["Upper A", "Lower", "Upper B", "Rower"]
   },
   "entries": [
-    {"date": "2026-09-28", "weight": 87.5, "kcal": 2900, "mood": 2},
+    {"date": "2026-09-28", "weight": 87.5, "kcal": 2900, "mood": 2, "sleep": 7.2, "sleepScore": 78},
     {"date": "2026-09-29", "weight": 86.2, "kcal": 2613, "training": "Upper A", "mood": 3, "sleep": 7.8, "sleepScore": 87}
   ]
 }

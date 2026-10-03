@@ -14,6 +14,7 @@
     {"date": "2026-09-29", "weight": 86.2, "kcal": 2613, "training": "Upper A", "mood": 3, "sleep": 7.8, "sleepScore": 87},
     {"date": "2026-09-30", "weight": 86.4, "kcal": 3000, "mood": 3, "sleep": 7.6, "sleepScore": 87, "note": "Kino linkin park movie - popcorn duzo kcal"},
     {"date": "2026-10-01", "weight": 86.3, "kcal": 2580, "protein": 176, "fat": 79, "carbs": 282, "training": "Lower", "mood": 5, "sleep": 8.8, "sleepScore": 95},
-    {"date": "2026-10-02", "weight": 87, "kcal": 2432, "protein": 192, "fat": 31, "carbs": 332, "mood": 4, "sleep": 5.3, "sleepScore": 70}
+    {"date": "2026-10-02", "weight": 87, "kcal": 2432, "protein": 192, "fat": 31, "carbs": 332, "mood": 4, "sleep": 5.3, "sleepScore": 70},
+    {"date": "2026-10-03", "weight": 86.5, "mood": 3, "sleep": 7.2, "sleepScore": 76}
   ]
 }

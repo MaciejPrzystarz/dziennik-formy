@@ -16,6 +16,7 @@
     {"date": "2026-10-01", "weight": 86.3, "kcal": 2580, "protein": 176, "fat": 79, "carbs": 282, "training": "Lower", "mood": 5, "sleep": 8.8, "sleepScore": 95},
     {"date": "2026-10-02", "weight": 87, "kcal": 2432, "protein": 192, "fat": 31, "carbs": 332, "mood": 4, "sleep": 5.3, "sleepScore": 70},
     {"date": "2026-10-03", "weight": 87, "kcal": 2462, "protein": 131, "fat": 52, "carbs": 354, "training": "Upper B", "mood": 4, "sleep": 7.2, "sleepScore": 76},
-    {"date": "2026-10-04", "weight": 87.2, "kcal": 2400, "protein": 174, "mood": 3, "sleep": 7, "sleepScore": 75, "note": "10,5h studiów - padam"}
+    {"date": "2026-10-04", "weight": 87.2, "kcal": 2400, "protein": 174, "mood": 3, "sleep": 7, "sleepScore": 75, "note": "10,5h studiów - padam"},
+    {"date": "2026-10-05", "weight": 86.2, "sleep": 8, "sleepScore": 96}
   ]
 }

@@ -513,8 +513,7 @@
   // The finished week on a given day: Sunday to the last Saturday before `today`.
   // On Sunday 2026-10-11 that is 2026-10-04 to 2026-10-10.
   function weekWindow(today) {
-    const back = (U.weekdayIndex(today) + 2) % 7 || 7; // days since Saturday, a whole week on Saturday
-    const end = U.addDays(today, -back);
+    const end = U.addDays(U.weekStart(today), -1); // the Saturday before the current week
     return { start: U.addDays(end, -6), end };
   }
 

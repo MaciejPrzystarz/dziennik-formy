@@ -45,8 +45,9 @@
     return (fromKey(key).getDay() + 6) % 7; // 0 = Monday
   }
 
+  // Weeks run Sunday to Saturday, the same as the weekly commit and summary (store.weekWindow).
   function weekStart(key) {
-    return addDays(key, -weekdayIndex(key));
+    return addDays(key, -fromKey(key).getDay());
   }
 
   function dayRange(fromK, toK) {

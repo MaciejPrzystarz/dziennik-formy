@@ -522,7 +522,7 @@ a { color: inherit; text-underline-offset: 2px; }
 .chart-sub { margin: 18px 0 6px; font-weight: 600; font-size: 15px; }
 .chart-sub small { margin-left: 4px; color: var(--muted); font-weight: 400; font-size: 13px; }
 
-/* Training heatmap: 20 weeks, one column per week, Monday on top. */
+/* Training heatmap: 20 weeks, one column per week, Sunday on top. */
 .heatmap {
   display: grid;
   grid-template-columns: 22px repeat(20, minmax(0, 1fr));

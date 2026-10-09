@@ -109,7 +109,8 @@
     assert.equal(w[2].kcal.avg, 2500);
     assert.equal(w[2].macros.protein.avg, 160);
     assert.equal(w[2].trainings.length, 1);
-    assert.ok(w[2].days[3].future, 'Thursday is still ahead');
+    assert.ok(w[2].days[4].future, 'Thursday is still ahead');
+    assert.equal(w[2].start, '2026-09-27', 'weeks start on Sunday');
   });
 
   test('kcalState: 85–105% of the target is on target', () => {

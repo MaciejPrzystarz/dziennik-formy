@@ -433,7 +433,7 @@
 
   function renderHeatmap(vm) {
     const s = vm.settings;
-    const firstMonday = U.addDays(U.weekStart(vm.today), -7 * (HEAT_WEEKS - 1));
+    const firstSunday = U.addDays(U.weekStart(vm.today), -7 * (HEAT_WEEKS - 1));
     const lastDay = U.addDays(U.weekStart(vm.today), 6);
     const cells = [];
     const starts = [];
@@ -441,7 +441,7 @@
 
     for (let w = 0; w < HEAT_WEEKS; w++) {
       for (let d = 0; d < 7; d++) {
-        const key = U.addDays(firstMonday, w * 7 + d);
+        const key = U.addDays(firstSunday, w * 7 + d);
         if (U.fromKey(key).getDate() === 1) starts.push([w, key]);
         const e = vm.byDate.get(key);
         let cls = 'hm-cell';
@@ -459,15 +459,15 @@
         cells.push(`<span class="${cls}" style="${style}" data-key="${key}"></span>`);
       }
     }
-    if (!starts.length || starts[0][0] >= 3) starts.unshift([0, firstMonday]);
+    if (!starts.length || starts[0][0] >= 3) starts.unshift([0, firstSunday]);
     const months = starts
       .filter(([w]) => w <= HEAT_WEEKS - 3) // a label in the last columns would stick out of the grid
       .map(([w, key]) => `<span class="hm-month" style="grid-column:${w + 2}">${U.monthShort(key)}</span>`);
-    const weekdays = [[2, 'pn'], [4, 'śr'], [6, 'pt']].map(([row, t]) => `<span class="hm-wd" style="grid-row:${row}">${t}</span>`);
+    const weekdays = [[3, 'pn'], [5, 'śr'], [7, 'pt']].map(([row, t]) => `<span class="hm-wd" style="grid-row:${row}">${t}</span>`);
 
     const heat = $('#heatmap');
     heat.innerHTML = months.join('') + weekdays.join('') + cells.join('');
-    heat.setAttribute('aria-label', `Treningi od ${U.fmtShort(firstMonday)} do ${U.fmtShort(lastDay)}: ${trainings}.`);
+    heat.setAttribute('aria-label', `Treningi od ${U.fmtShort(firstSunday)} do ${U.fmtShort(lastDay)}: ${trainings}.`);
 
     const total = vm.entries.filter(S.isTraining).length;
     $('#train-count').textContent = `${total} ${U.plural(total, 'trening', 'treningi', 'treningów')} od startu`;

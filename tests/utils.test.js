@@ -43,12 +43,13 @@
     assert.ok(!U.isValidKey(20260928));
   });
 
-  test('weekdayIndex and weekStart: weeks start on Monday', () => {
+  test('weekdayIndex counts from Monday, weekStart is Sunday', () => {
     assert.equal(U.weekdayIndex('2026-09-28'), 0); // Monday
     assert.equal(U.weekdayIndex('2026-10-04'), 6); // Sunday
-    assert.equal(U.weekStart('2026-09-30'), '2026-09-28');
-    assert.equal(U.weekStart('2026-10-04'), '2026-09-28');
-    assert.equal(U.weekStart('2026-10-05'), '2026-10-05');
+    assert.equal(U.weekStart('2026-09-30'), '2026-09-27');
+    assert.equal(U.weekStart('2026-10-04'), '2026-10-04');
+    assert.equal(U.weekStart('2026-10-10'), '2026-10-04'); // Saturday ends the week
+    assert.equal(U.weekStart('2026-10-25'), '2026-10-25'); // DST change day
   });
 
   test('dayRange: inclusive on both ends', () => {

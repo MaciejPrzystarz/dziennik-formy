@@ -35,6 +35,12 @@
   const sorted = (entries) => entries.slice().sort(byDate);
   const hasWeight = (e) => typeof e.weight === 'number';
   const isTraining = (e) => typeof e.training === 'string' && e.training.trim() !== '';
+  // A day you logged yourself. Garmin fills sleep and its own numbers every day on its own, so those
+  // alone don't count: streaks and "wpisy x/7" are about what you did.
+  const isLogged = (e) => hasWeight(e) || typeof e.kcal === 'number' || hasMacros(e) || isTraining(e) ||
+    typeof e.mood === 'number' || (typeof e.note === 'string' && e.note.trim() !== '');
+  // Garmin's daily numbers, averaged per week. vo2max is the last value of the week.
+  const GARMIN_MEANS = ['steps', 'restingHr', 'stress', 'bodyBatteryHigh', 'bodyBatteryLow', 'hrv'];
 
   function weightEntries(entries) {
     return sorted(entries).filter(hasWeight);
@@ -136,7 +142,7 @@
   }
 
   function streaks(entries, today) {
-    const days = new Set(entries.filter((e) => e.date <= today).map((e) => e.date));
+    const days = new Set(entries.filter((e) => e.date <= today && isLogged(e)).map((e) => e.date));
     let current = 0;
     let k = days.has(today) ? today : U.addDays(today, -1); // today isn't lost until it's over
     while (days.has(k)) { current++; k = U.addDays(k, -1); }
@@ -184,11 +190,18 @@
       const sq = logged.filter((e) => typeof e.sleepScore === 'number').map((e) => e.sleepScore);
       const macros = macroMeans(logged);
       const avg = ws.length ? mean(ws) : null;
+      const garmin = {};
+      GARMIN_MEANS.forEach((k) => {
+        const xs = logged.filter((e) => typeof e[k] === 'number').map((e) => e[k]);
+        if (xs.length) garmin[k] = { avg: mean(xs), count: xs.length };
+      });
+      const vo2 = logged.filter((e) => typeof e.vo2max === 'number');
+      if (vo2.length) garmin.vo2max = vo2[vo2.length - 1].vo2max;
       out.push({
         start,
         end: U.addDays(start, 6),
         days,
-        logged: logged.length,
+        logged: logged.filter(isLogged).length,
         weight: avg == null ? null : { avg, count: ws.length, min: Math.min(...ws) },
         delta: avg != null && prevAvg != null ? avg - prevAvg : null,
         kcal: ks.length ? { avg: mean(ks), count: ks.length } : null,
@@ -196,6 +209,7 @@
         sleep: ss.length ? { avg: mean(ss), count: ss.length } : null,
         sleepScore: sq.length ? { avg: mean(sq), count: sq.length } : null,
         macros,
+        garmin: Object.keys(garmin).length ? garmin : null,
         trainings: logged.filter(isTraining)
       });
       if (avg != null) prevAvg = avg;
@@ -390,7 +404,7 @@
     const all = sorted(entries).filter((e) => e.date <= today);
     const trained = new Set(all.filter(isTraining).map((e) => e.training));
     const c = {
-      count: entries.length,
+      count: entries.filter(isLogged).length,
       lost: prog.trend == null ? 0 : prog.lost,
       ratio: prog.ratio,
       goalReached: prog.trend != null && prog.trend <= s.targetWeight,
@@ -479,7 +493,7 @@
   }
 
   DF.stats = {
-    MOODS, SLEEP_GOOD, MACROS, INSIGHT_MIN, byDate, sorted, isTraining, hasMacros, macroKcal,
+    MOODS, SLEEP_GOOD, MACROS, INSIGHT_MIN, byDate, sorted, isTraining, isLogged, hasMacros, macroKcal,
     weightEntries, latestWeight, minWeight, movingAverage, trendWeight, slope, planWeightAt,
     progress, plates, eta, streaks, weekSummary, weeks, kcalState, kcalSummary, moodSummary, sleepSummary,
     macroMeans, macroSummary, insights, badges, isNewLow, coachMessage

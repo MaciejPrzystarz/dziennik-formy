@@ -157,4 +157,57 @@
     assert.ok(!again.changed, 'second run on the same Sunday changes nothing');
     assert.deepEqual(again.days, []);
   });
+
+  test('cleanEntry: Garmin fields validated, saved after the logged ones, note last', () => {
+    const e = store.cleanEntry({
+      date: '2026-10-09', note: 'x', vo2max: 47.26, hrvStatus: 'BALANCED', hrv: 48.4, steps: '8432',
+      restingHr: 52, stress: -1, bodyBatteryHigh: 85, bodyBatteryLow: 120, activity: ' Rower 40 km ', weight: 86.4
+    });
+    assert.deepEqual(e, {
+      date: '2026-10-09', weight: 86.4, steps: 8432, restingHr: 52, bodyBatteryHigh: 85, hrv: 48,
+      hrvStatus: 'balanced', vo2max: 47.3, activity: 'Rower 40 km', note: 'x'
+    });
+    const line = store.serialize(store.normalize({ entries: [e] })).split('\n').find((l) => l.includes('2026-10-09'));
+    assert.equal(line.trim(),
+      '{"date": "2026-10-09", "weight": 86.4, "steps": 8432, "restingHr": 52, "bodyBatteryHigh": 85, "hrv": 48, ' +
+      '"hrvStatus": "balanced", "vo2max": 47.3, "activity": "Rower 40 km", "note": "x"}');
+  });
+
+  test('mergeForm: saving the form keeps Garmin data', () => {
+    const server = { date: '2026-10-09', weight: 86.4, sleep: 7.8, steps: 8432, hrv: 48, activity: 'Spacer 30 min' };
+    const merged = store.mergeForm(server, { date: '2026-10-09', weight: 86.4, sleep: 7.8, kcal: 2400 }, server);
+    assert.deepEqual(merged, { date: '2026-10-09', weight: 86.4, sleep: 7.8, steps: 8432, hrv: 48, activity: 'Spacer 30 min', kcal: 2400 });
+  });
+
+  test('applyGarmin: Garmin numbers updated, what you typed wins, missing never deletes', () => {
+    const data = store.normalize({
+      settings: { trainings: ['Upper A', 'Lower', 'Upper B', 'Rower'] },
+      entries: [{ date: '2026-10-08', sleep: 7, sleepScore: 80, steps: 1000, training: 'Lower' }]
+    });
+    const r = store.applyGarmin(data, [
+      { date: '2026-10-08', sleep: 7.53, sleepScore: 82, steps: 9500, hrv: 45, hrvStatus: 'balanced',
+        activities: [{ type: 'road_biking', name: 'Rano', km: 40.24, min: 92 }] },
+      { date: '2026-10-09', sleep: 7.8, sleepScore: 89, weight: 86.4, restingHr: 51, stress: 28,
+        bodyBatteryHigh: 90, bodyBatteryLow: 25, vo2max: 47.3,
+        activities: [{ type: 'strength_training', name: 'Siła', min: 58 }, { type: 'cycling', km: 12, min: 30 }] },
+      { date: '2026-10-10', steps: null }
+    ]);
+    assert.deepEqual(r.days, ['2026-10-08', '2026-10-09']);
+    const [a, b] = r.data.entries;
+    assert.equal(a.sleep, 7, 'typed sleep wins');
+    assert.equal(a.sleepScore, 80);
+    assert.equal(a.steps, 9500, 'Garmin field updated');
+    assert.equal(a.training, 'Lower', 'typed training wins');
+    assert.equal(a.activity, 'Rower 40,2 km, 1 h 32 min');
+    assert.equal(b.sleep, 7.8, 'empty sleep filled');
+    assert.equal(b.weight, 86.4);
+    assert.equal(b.training, 'Rower', 'cycling matches a training name, strength does not');
+    assert.equal(b.activity, 'Siłownia 58 min; Rower 12 km, 30 min');
+    assert.ok(!r.data.entries.some((e) => e.date === '2026-10-10'), 'no data, no entry');
+
+    const again = store.applyGarmin(r.data, [{ date: '2026-10-08', steps: 9500 }, { date: '2026-10-09' }]);
+    assert.deepEqual(again.days, [], 'same numbers again: nothing to commit');
+    assert.equal(again.data.entries[0].activity, 'Rower 40,2 km, 1 h 32 min', 'activities missing from the reply stay');
+    assert.equal(store.garminMessage(r.days), 'garmin: 2026-10-08, 2026-10-09');
+  });
 })();

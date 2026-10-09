@@ -1,0 +1,131 @@
+# Garmin: a few times a day pulls the last days from Garmin Connect (sleep, sleep score, weight, steps,
+# resting heart rate, stress, Body Battery, HRV, VO2max, activities) and writes them to the "bufor" branch.
+# Sunday's weekly commit takes them to main with everything else.
+#
+# Setup (once), see README "Garmin":
+#   GARMIN_TOKENS  - token from scripts/garmin_login.py (run it on your computer)
+#   SECRETS_TOKEN  - fine-grained token for this repo with "Secrets: Read and write". Garmin's login
+#                    token changes on every refresh and the old one stops working, so after each run
+#                    the new one has to be saved back into GARMIN_TOKENS.
+# Without GARMIN_TOKENS the workflow does nothing.
+name: Garmin
+
+on:
+  schedule:
+    - cron: '20 4,8,12,16,20 * * *' # 6:20, 10:20, 14:20, 18:20, 22:20 in Warsaw in summer, an hour earlier in winter
+  workflow_dispatch:
+    inputs:
+      days:
+        description: 'Ile ostatnich dni pobrać (razem z dzisiaj)'
+        default: '3'
+      dry_run:
+        description: 'Tylko pokaż, co przyszło z Garmina, bez zapisu'
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: bufor # the weekly commit uses the same group: never two writers to "bufor" at once
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    env:
+      TZ: Europe/Warsaw
+      STAGING: bufor
+      DATA: data/health.json
+    steps:
+      - name: Configured?
+        id: setup
+        env:
+          HAS_TOKENS: ${{ secrets.GARMIN_TOKENS != '' }}
+        run: |
+          if [ "$HAS_TOKENS" != true ]; then
+            echo "::notice::Brak sekretu GARMIN_TOKENS: Garmin nie jest jeszcze podłączony (README, sekcja Garmin)."
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@v7
+        if: steps.setup.outputs.run == 'true'
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        if: steps.setup.outputs.run == 'true'
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v5
+        if: steps.setup.outputs.run == 'true'
+        with:
+          node-version: 24
+      - name: Install garminconnect
+        if: steps.setup.outputs.run == 'true'
+        run: pip install --quiet garminconnect==0.3.17
+
+      - name: Token to a file
+        if: steps.setup.outputs.run == 'true'
+        env:
+          GARMIN_TOKENS: ${{ secrets.GARMIN_TOKENS }}
+        run: |
+          mkdir -m 700 -p "$RUNNER_TEMP/garmin"
+          printf '%s' "$GARMIN_TOKENS" > "$RUNNER_TEMP/garmin/garmin_tokens.json"
+          chmod 600 "$RUNNER_TEMP/garmin/garmin_tokens.json"
+          sha256sum "$RUNNER_TEMP/garmin/garmin_tokens.json" | cut -d' ' -f1 > "$RUNNER_TEMP/token.sha"
+
+      - name: Fetch from Garmin
+        id: fetch
+        if: steps.setup.outputs.run == 'true'
+        run: |
+          python scripts/garmin_fetch.py --tokens "$RUNNER_TEMP/garmin" \
+            --days "${{ inputs.days || '3' }}" --out "$RUNNER_TEMP/days.json"
+          if [ "${{ inputs.dry_run }}" = true ]; then cat "$RUNNER_TEMP/days.json"; fi
+
+      # Runs even when fetching failed: a refresh may already have replaced the token.
+      - name: Save the refreshed token
+        if: always() && steps.setup.outputs.run == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.SECRETS_TOKEN }}
+        run: |
+          file="$RUNNER_TEMP/garmin/garmin_tokens.json"
+          [ -s "$file" ] || exit 0
+          if [ "$(sha256sum "$file" | cut -d' ' -f1)" = "$(cat "$RUNNER_TEMP/token.sha")" ]; then
+            echo "Token bez zmian."
+            exit 0
+          fi
+          if [ -z "$GH_TOKEN" ]; then
+            echo "::error::Garmin odświeżył token, ale brak sekretu SECRETS_TOKEN, więc nie da się go zapisać. Za kilka dni logowanie przestanie działać."
+            exit 1
+          fi
+          gh secret set GARMIN_TOKENS --repo "$GITHUB_REPOSITORY" < "$file"
+          echo "Nowy token zapisany w GARMIN_TOKENS."
+
+      - name: Write to bufor
+        if: steps.setup.outputs.run == 'true' && inputs.dry_run != true
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          work="$RUNNER_TEMP/bufor"
+          for attempt in 1 2 3; do
+            rm -rf "$work"; git worktree prune
+            if git fetch -q origin "$STAGING"; then base=FETCH_HEAD; else git fetch -q origin main; base=origin/main; fi
+            git worktree add -q --detach "$work" "$base"
+            # Scripts from main, data from bufor.
+            msg=$(node scripts/garmin-apply.mjs "$work/$DATA" "$RUNNER_TEMP/days.json")
+            if [ -z "$msg" ]; then
+              echo "Bez zmian w danych."
+              exit 0
+            fi
+            git -C "$work" commit -q -m "$msg" -- "$DATA"
+            if git -C "$work" push -q origin "HEAD:refs/heads/$STAGING"; then
+              echo "$STAGING: $msg"
+              exit 0
+            fi
+            sleep 5 # the app saved something in the meantime: start again from the new bufor
+          done
+          echo "Nie udało się po 3 próbach." >&2
+          exit 1

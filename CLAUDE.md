@@ -19,8 +19,9 @@ Przykłady: „dziś 84,2, 2450 kcal, Upper A, 4/5”, „wczoraj rower 40 km, s
 
 - `entries` posortowane rosnąco po `date`, jeden wpis na dzień, każdy wpis w jednej linii:
   `    {"date": "2026-09-28", "weight": 84.2, "kcal": 2450, "protein": 160, "fat": 70, "carbs": 290, "training": "Upper A", "mood": 4, "sleep": 7.5, "sleepScore": 82, "note": "..."}`
-- Kolejność kluczy: `date`, `weight`, `kcal`, `protein`, `fat`, `carbs`, `training`, `mood`, `sleep`, `sleepScore`, `note`.
-  Brak wartości = brak klucza (bez `null` i pustych napisów).
+- Kolejność kluczy: `date`, `weight`, `kcal`, `protein`, `fat`, `carbs`, `training`, `mood`, `sleep`, `sleepScore`, potem pola
+  z Garmina (`steps`, `restingHr`, `stress`, `bodyBatteryHigh`, `bodyBatteryLow`, `hrv`, `hrvStatus`, `vo2max`, `activity`),
+  na końcu `note`. Brak wartości = brak klucza (bez `null` i pustych napisów).
 - `date`: `RRRR-MM-DD`.
 - `weight`: kg, liczba z kropką, maks. 2 miejsca po przecinku („84,2” → `84.2`).
 - `kcal`: liczba całkowita.
@@ -34,6 +35,11 @@ Przykłady: „dziś 84,2, 2450 kcal, Upper A, 4/5”, „wczoraj rower 40 km, s
 - `sleep`: jakość snu, czyli ile godzin: liczba z kropką, 0–24, maks. 2 miejsca po przecinku („7,5 h” → `7.5`, „7 h 20 min” → `7.33`).
 - `sleepScore`: ocena snu 0–100, liczba całkowita („sen 82/100”, „ocena snu 82” → `82`).
 - `note`: krótko, maks. 280 znaków (np. rekord, dystans roweru).
+- Pola z Garmina wpisuje synchronizacja (niżej, „Garmin”). Z czatu ich nie zmieniaj, chyba że użytkownik wprost o to prosi:
+  `steps` kroki, `restingHr` tętno spoczynkowe (bpm), `stress` średni stres 0–100, `bodyBatteryHigh` / `bodyBatteryLow`
+  Body Battery najwyżej / najniżej w ciągu dnia 0–100, `hrv` średnie HRV z nocy (ms), `hrvStatus` status HRV
+  (`balanced`, `unbalanced`, `low`, `poor`), `vo2max` (jedno miejsce po przecinku), `activity` aktywności z zegarka
+  (np. „Rower 40,2 km, 1 h 32 min; Siłownia 58 min”). Wszystkie liczby całkowite oprócz `vo2max`.
 - `settings` (cele) zmieniaj tylko na wyraźną prośbę. Nie usuwaj pól, których nie znasz. Cele makro są opcjonalne:
   `proteinTarget`, `fatTarget`, `carbsTarget` (gramy dziennie, liczby całkowite), zaraz po `kcalTarget`. Brak celu = brak klucza.
 - Plik musi zostać poprawnym JSON-em. Przy błędzie składni aplikacja przechodzi w tryb tylko do odczytu.
@@ -57,11 +63,26 @@ jest przebudowywany na nowym `main` (stare commity zapisów znikają). Commit: `
 z wpisem, poprawki: 2026-10-01, cele)`. Logika: `weekWindow` i `weeklyMerge` w `web/js/store.js`, skrypt
 `scripts/weekly-commit.mjs`. Ręcznie: Actions → Weekly commit → Run workflow (powtórne uruchomienie nic nie psuje).
 
+## Garmin
+
+`.github/workflows/garmin.yml` pięć razy dziennie pobiera z Garmin Connect ostatnie 3 dni (`scripts/garmin_fetch.py`,
+nieoficjalna biblioteka `garminconnect`) i zapisuje je na `bufor` (`scripts/garmin-apply.mjs`, logika: `applyGarmin`
+w `web/js/store.js`). Commit: `garmin: 2026-10-08, 2026-10-09`. Zasady:
+
+- Pola z Garmina (lista w „Format”) są Garmina: każda synchronizacja je aktualizuje.
+- `sleep`, `sleepScore`, `weight` i `training` Garmin wpisuje tylko, gdy są puste: wpisane ręcznie zawsze wygrywa.
+  Trening dopasowuje tylko do nazw z `settings.trainings` (rower → `Rower`); siłowni nie zgaduje (Upper A czy Lower?).
+- Brak danych z Garmina nigdy nie usuwa pól. Dzień tylko z danymi Garmina nie liczy się do serii ani do „wpisy x/7”
+  (`isLogged` w `web/js/stats.js`).
+- Logowanie: token z `scripts/garmin_login.py` w sekrecie `GARMIN_TOKENS`. Garmin zmienia token przy każdym odświeżeniu
+  (ważny 30 dni), więc workflow zapisuje nowy z powrotem tokenem `SECRETS_TOKEN` (fine-grained, Secrets: Read and write).
+  Gdy workflow zgłasza błąd logowania, uruchom `garmin_login.py` jeszcze raz i podmień `GARMIN_TOKENS`.
+
 ## Cotygodniowe podsumowanie
 
 W niedzielę o 10:00 (Europe/Warsaw) zaplanowane zadanie czyta `data/health.json` z gałęzi `bufor` i wysyła jeden mail
 z podsumowaniem tego samego tygodnia co commit (niedziela–sobota), bez ponowień. Oprócz liczb (waga, kalorie i makro
-wobec celów, treningi wobec `weeklyTrainings`, sen, samopoczucie) wyciąga wnioski: czyta notatki (`note`) z każdego dnia,
+wobec celów, treningi wobec `weeklyTrainings`, sen, samopoczucie, dane z Garmina) wyciąga wnioski: czyta notatki (`note`) z każdego dnia,
 łączy je z danymi, szuka zależności (sen, treningi, kalorie, waga dzień po dniu), porównuje z poprzednimi tygodniami
 i daje 1–2 konkretne działania na kolejny tydzień. Dlatego warto w `note` pisać, jak poszedł dzień. Tylko czyta dane:
 nic nie zapisuje w repo.

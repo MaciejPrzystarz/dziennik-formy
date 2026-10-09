@@ -82,8 +82,27 @@
     if (!parts.length && e.mood) parts.push(`samopoczucie ${S.MOODS[e.mood].label.toLowerCase()}`);
     if (!parts.length && typeof e.sleep === 'number') parts.push(`sen ${U.fmtHours(e.sleep)} h`);
     if (!parts.length && typeof e.sleepScore === 'number') parts.push(`sen ${e.sleepScore}/100`);
+    if (!parts.length && garminParts(e).length) parts.push('dane z Garmina');
     if (!parts.length) parts.push('notatka');
     return parts.join(', ');
+  }
+
+  const HRV_LABELS = { balanced: 'zrównoważony', unbalanced: 'niezrównoważony', low: 'niski', poor: 'słaby' };
+
+  // Garmin's numbers for a day: "8 432 kroki · tętno 52 · stres 31 · Body Battery 85→20 · HRV 48 ms (zrównoważony) · VO₂max 47".
+  function garminParts(e) {
+    const parts = [];
+    if (typeof e.steps === 'number') parts.push(`${U.fmtInt(e.steps)} ${U.plural(e.steps, 'krok', 'kroki', 'kroków')}`);
+    if (typeof e.restingHr === 'number') parts.push(`tętno spocz. ${e.restingHr}`);
+    if (typeof e.stress === 'number') parts.push(`stres ${e.stress}`);
+    const bbHigh = typeof e.bodyBatteryHigh === 'number';
+    const bbLow = typeof e.bodyBatteryLow === 'number';
+    if (bbHigh || bbLow) parts.push(`Body Battery ${bbHigh ? e.bodyBatteryHigh : '–'}→${bbLow ? e.bodyBatteryLow : '–'}`);
+    if (typeof e.hrv === 'number') parts.push(`HRV ${e.hrv} ms${e.hrvStatus ? ` (${HRV_LABELS[e.hrvStatus]})` : ''}`);
+    else if (e.hrvStatus) parts.push(`HRV ${HRV_LABELS[e.hrvStatus]}`);
+    if (typeof e.vo2max === 'number') parts.push(`VO₂max ${U.fmt1(e.vo2max)}`);
+    if (e.activity) parts.push(e.activity);
+    return parts;
   }
 
   // Everything logged for a day, for the heatmap caption.
@@ -95,7 +114,7 @@
     if (e.mood) parts.push(`samopoczucie ${S.MOODS[e.mood].emoji} ${S.MOODS[e.mood].label.toLowerCase()}`);
     if (typeof e.sleep === 'number') parts.push(`sen ${U.fmtHours(e.sleep)} h`);
     if (typeof e.sleepScore === 'number') parts.push(`ocena snu ${e.sleepScore}/100`);
-    return parts.join(', ');
+    return parts.concat(garminParts(e)).join(', ');
   }
 
   // ---------- render ----------
@@ -395,6 +414,11 @@
     const macros = w.macros
       ? esc(macroLine({ protein: w.macros.protein && w.macros.protein.avg, fat: w.macros.fat && w.macros.fat.avg, carbs: w.macros.carbs && w.macros.carbs.avg }))
       : '<span class="none">–</span>';
+    const g = w.garmin || {};
+    const garminFacts = (g.steps ? `<div><dt>Kroki</dt><dd>${U.fmtInt(g.steps.avg)}<small>/dzień</small></dd></div>` : '') +
+      (g.restingHr || g.hrv
+        ? `<div><dt>Tętno · HRV</dt><dd>${g.restingHr ? U.fmtInt(g.restingHr.avg) : '–'}<small> bpm</small> <small>·</small> ${g.hrv ? U.fmtInt(g.hrv.avg) : '–'}<small> ms</small></dd></div>`
+        : '');
     return `<article class="wk${current ? ' is-current' : ''}">` +
       '<div class="wk-top">' +
         `<h3 class="wk-range">${U.fmtRange(w.start, w.end)}${current ? '<span class="wk-tag">ten tydzień</span>' : ''}</h3>` +
@@ -408,6 +432,7 @@
         `<div><dt>Treningi</dt><dd>${trainings}</dd></div>` +
         `<div><dt>Samopoczucie</dt><dd>${mood}</dd></div>` +
         `<div><dt>Sen</dt><dd>${sleep}</dd></div>` +
+        garminFacts +
         `<div><dt>Wpisy</dt><dd>${w.logged}<small>/7</small></dd></div>` +
       '</dl>' +
       '</article>';
@@ -585,6 +610,8 @@
     if (typeof e.sleep === 'number') sleepParts.push(`${U.fmtHours(e.sleep)}<small> h</small>`);
     if (typeof e.sleepScore === 'number') sleepParts.push(`<small title="Ocena snu">${e.sleepScore}/100</small>`);
     const sleep = sleepParts.length ? `<span class="log-sleep" title="Sen">${sleepParts.join(' ')}</span>` : '';
+    const garmin = garminParts(e);
+    const garminLine = garmin.length ? `<span class="log-garmin" title="Z Garmina">${esc(garmin.join(' · '))}</span>` : '';
     const note = e.note ? `<span class="log-note">${esc(e.note)}</span>` : '';
 
     return `<${tag} class="log-row${e.date === today ? ' is-today' : ''}"${attrs}>` +
@@ -594,6 +621,7 @@
       `<span class="log-train">${training}</span>` +
       `<span class="log-mood">${mood}</span>` +
       sleep +
+      garminLine +
       note +
       `</${tag}>`;
   }
@@ -828,7 +856,7 @@
   function isDirty() {
     const now = formEntry(readForm());
     const was = ui.original || {};
-    return store.ENTRY_FIELDS.some((f) => !same(now[f], was[f]));
+    return store.FORM_FIELDS.some((f) => !same(now[f], was[f]));
   }
 
   function showFormError(text) {

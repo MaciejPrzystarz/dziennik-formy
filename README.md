@@ -69,6 +69,30 @@ w tygodniu: w niedzielę o 10:00 `.github/workflows/weekly.yml` przenosi tydzie�
 (np. 11.10 → 4.10–10.10), a `bufor` przebudowuje na nowym `main`. Wpis z niedzielnego poranka czeka na kolejny tydzień.
 Podsumowanie tygodnia przychodzi mailem w niedzielę o 10:00.
 
+## Garmin
+
+`.github/workflows/garmin.yml` pięć razy dziennie pobiera z Garmin Connect: sen i ocenę snu, wagę, kroki, tętno
+spoczynkowe, stres, Body Battery, HRV ze statusem, VO2max i aktywności. Zapisuje je na `bufor`, więc są od razu na stronie
+(linia pod wpisem dnia, kroki i tętno/HRV w kartach tygodni) i w niedzielnym podsumowaniu. Sen, wagę i trening wpisane
+ręcznie Garmin zostawia w spokoju. Działa przez nieoficjalną bibliotekę
+[garminconnect](https://github.com/cyberjunky/python-garminconnect): Garmin jej nie wspiera, więc po zmianie logowania
+u Garmina może przestać działać, dopóki biblioteka nie dostanie poprawki.
+
+Podłączenie (raz):
+
+1. Python 3.12+: `winget install Python.Python.3.12`, potem w nowym terminalu `pip install garminconnect==0.3.17`.
+2. `python scripts/garmin_login.py`: e-mail, hasło i kod MFA do Garmin Connect. Hasło nigdzie się nie zapisuje, token
+   ląduje w schowku.
+3. Repo na GitHubie → Settings → Secrets and variables → Actions → New repository secret: `GARMIN_TOKENS`, wklej token.
+4. Token do zapisu sekretu: GitHub → Settings → Developer settings → Fine-grained tokens → Generate new token,
+   Only select repositories → `dziennik-formy`, Repository permissions → Secrets: Read and write, termin np. rok.
+   Zapisz go jako sekret `SECRETS_TOKEN`. Potrzebny, bo Garmin zmienia token przy każdym odświeżeniu, a stary przestaje
+   działać: workflow zapisuje nowy w `GARMIN_TOKENS`.
+5. Actions → Garmin → Run workflow z zaznaczonym „Tylko pokaż”: w logu widać, co przyszło z Garmina, nic się nie zapisuje.
+   Potem zwykłe uruchomienie albo czekanie na najbliższe zaplanowane.
+
+Gdy Garmin przez ponad 30 dni nie był synchronizowany albo workflow pisze o błędzie logowania: punkt 2 i 3 jeszcze raz.
+
 ## Format danych
 
 ```json

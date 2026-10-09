@@ -15,7 +15,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: weekly-commit
+  group: bufor # shared with garmin.yml: never two writers to "bufor" at once
   cancel-in-progress: false
 
 jobs:

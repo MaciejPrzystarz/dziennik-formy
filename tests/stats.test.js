@@ -94,6 +94,23 @@
     assert.equal(S.streaks(entries, '2026-10-01').current, 0, 'a missed day breaks it');
   });
 
+  test('streaks and weeks: days with only Garmin data are not logged days', () => {
+    const entries = [
+      { date: '2026-10-04', mood: 3, steps: 9000, hrv: 50 },
+      { date: '2026-10-05', sleep: 7.5, sleepScore: 80, steps: 7000, restingHr: 52, hrv: 46 }, // Garmin only
+      { date: '2026-10-06', kcal: 2400, steps: 11000, restingHr: 54, vo2max: 47.1 }
+    ];
+    assert.equal(S.streaks(entries, '2026-10-06').current, 1);
+    assert.ok(!S.isLogged(entries[1]));
+    const w = S.weeks(entries, '2026-10-06').pop();
+    assert.equal(w.logged, 2);
+    assert.equal(w.garmin.steps.avg, 9000);
+    assert.equal(w.garmin.restingHr.avg, 53);
+    assert.equal(w.garmin.hrv.count, 2);
+    assert.equal(w.garmin.vo2max, 47.1);
+    assert.equal(w.sleep.avg, 7.5, 'Garmin sleep still counts in the averages');
+  });
+
   test('weeks: empty weeks kept, delta skips weeks without weigh-ins', () => {
     const w = S.weeks([
       { date: '2026-09-14', weight: 88 },

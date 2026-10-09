@@ -31,7 +31,13 @@
   // Key order in the file. The macro targets sit next to the calorie target.
   const SETTING_KEYS = ['name', 'startDate', 'startWeight', 'targetWeight', 'targetDate', 'kcalTarget',
     ...MACRO_TARGETS, 'weeklyTrainings', 'trainings'];
-  const ENTRY_FIELDS = ['weight', 'kcal', 'protein', 'fat', 'carbs', 'training', 'mood', 'sleep', 'sleepScore', 'note'];
+  // Fields the entry form edits. Saving the form touches only these.
+  const FORM_FIELDS = ['weight', 'kcal', 'protein', 'fat', 'carbs', 'training', 'mood', 'sleep', 'sleepScore', 'note'];
+  // Filled by the Garmin sync (scripts/garmin_fetch.py), read-only in the app.
+  const GARMIN_FIELDS = ['steps', 'restingHr', 'stress', 'bodyBatteryHigh', 'bodyBatteryLow', 'hrv', 'hrvStatus', 'vo2max', 'activity'];
+  // Key order in the file: what you log, then Garmin's numbers, the note last.
+  const ENTRY_FIELDS = [...FORM_FIELDS.filter((k) => k !== 'note'), ...GARMIN_FIELDS, 'note'];
+  const HRV_STATUSES = ['balanced', 'unbalanced', 'low', 'poor'];
 
   // Valid ranges, shared by the file parser and the forms so both accept the same values.
   const LIMITS = Object.freeze({
@@ -42,7 +48,13 @@
     macroTarget: [1, 1000],
     weeklyTrainings: [0, 14],
     sleep: [0, 24],
-    sleepScore: [0, 100]
+    sleepScore: [0, 100],
+    steps: [0, 200000],
+    restingHr: [20, 250],
+    stress: [0, 100],
+    bodyBattery: [0, 100],
+    hrv: [1, 300],
+    vo2max: [10, 100]
   });
 
   class StoreError extends Error {
@@ -116,6 +128,21 @@
     if (sleep != null && sleep >= 0 && sleep <= 24) e.sleep = Math.round(sleep * 100) / 100;
     const sleepScore = U.parseNumber(raw.sleepScore);
     if (sleepScore != null && sleepScore >= 0 && sleepScore <= 100) e.sleepScore = Math.round(sleepScore);
+    const int = (k, [lo, hi]) => {
+      const n = U.parseNumber(raw[k]);
+      if (n != null && n >= lo && n <= hi) e[k] = Math.round(n);
+    };
+    int('steps', LIMITS.steps);
+    int('restingHr', LIMITS.restingHr);
+    int('stress', LIMITS.stress);
+    int('bodyBatteryHigh', LIMITS.bodyBattery);
+    int('bodyBatteryLow', LIMITS.bodyBattery);
+    int('hrv', LIMITS.hrv);
+    const status = typeof raw.hrvStatus === 'string' ? raw.hrvStatus.trim().toLowerCase() : '';
+    if (HRV_STATUSES.includes(status)) e.hrvStatus = status;
+    const vo2 = U.parseNumber(raw.vo2max);
+    if (vo2 != null && vo2 >= LIMITS.vo2max[0] && vo2 <= LIMITS.vo2max[1]) e.vo2max = Math.round(vo2 * 10) / 10;
+    if (typeof raw.activity === 'string' && raw.activity.trim()) e.activity = raw.activity.trim().slice(0, 200);
     if (typeof raw.note === 'string' && raw.note.trim()) e.note = raw.note.trim().slice(0, 280);
     Object.keys(raw).forEach((k) => {
       if (k === 'date' || ENTRY_FIELDS.includes(k)) return;
@@ -463,20 +490,25 @@
 
   // `values` is the form content, `original` the entry as it looked when the form was filled.
   // Fields the user didn't touch keep the value that is on GitHub now, so an edit made from
-  // chat in the meantime isn't overwritten by stale form data.
+  // chat in the meantime isn't overwritten by stale form data. Garmin fields aren't in the form
+  // and always stay as they are.
+  function mergeForm(server, values, original) {
+    const merged = Object.assign({}, server || {}, { date: values.date });
+    FORM_FIELDS.forEach((f) => {
+      const mine = values[f];
+      const touched = !server || !sameValue(mine, original ? original[f] : undefined);
+      if (!touched) return;
+      if (blank(mine)) delete merged[f];
+      else merged[f] = mine;
+    });
+    return merged;
+  }
+
   function upsertEntry(values, original) {
     const date = values.date;
     return commit((data) => {
       const i = data.entries.findIndex((e) => e.date === date);
-      const server = i >= 0 ? data.entries[i] : null;
-      const merged = Object.assign({}, server || {}, { date });
-      ENTRY_FIELDS.forEach((f) => {
-        const mine = values[f];
-        const touched = !server || !sameValue(mine, original ? original[f] : undefined);
-        if (!touched) return;
-        if (blank(mine)) delete merged[f];
-        else merged[f] = mine;
-      });
+      const merged = mergeForm(i >= 0 ? data.entries[i] : null, values, original);
       if (i >= 0) data.entries[i] = merged;
       else data.entries.push(merged);
       return data;
@@ -507,6 +539,89 @@
     return `settings: cel ${s.targetWeight} kg do ${s.targetDate}, ${s.kcalTarget} kcal` +
       `${macros.length ? `, ${macros.join(', ')}` : ''}, ${s.weeklyTrainings} treningi/tydz.`;
   }
+
+  // ---------- Garmin ----------
+
+  // Garmin activity types (activityType.typeKey) → a Polish label. Training names from the settings
+  // ("Rower", "Bieganie") are matched against these labels.
+  const GARMIN_ACTIVITIES = [
+    [/cycl|biking|ride|bike/, 'Rower'],
+    [/run/, 'Bieganie'],
+    [/strength/, 'Siłownia'],
+    [/swim/, 'Pływanie'],
+    [/hik/, 'Wędrówka'],
+    [/walk/, 'Spacer'],
+    [/yoga|pilates/, 'Joga'],
+    [/elliptical|rowing|stair|cardio|hiit/, 'Cardio']
+  ];
+  const CARDIO = ['Rower', 'Bieganie', 'Pływanie', 'Cardio'];
+
+  function garminLabel(a) {
+    const type = String(a.type || '').toLowerCase();
+    const hit = GARMIN_ACTIVITIES.find(([re]) => re.test(type));
+    return hit ? hit[1] : (String(a.name || '').trim() || 'Aktywność');
+  }
+
+  function fmtMinutes(min) {
+    const m = Math.round(min);
+    return m < 60 ? `${m} min` : `${Math.floor(m / 60)} h${m % 60 ? ` ${m % 60} min` : ''}`;
+  }
+
+  // "Rower 40,2 km, 1 h 32 min; Siłownia 58 min"
+  function activitySummary(list) {
+    return list.map((a) => {
+      const parts = [garminLabel(a)];
+      const km = U.parseNumber(a.km);
+      if (km != null && km >= 0.1) parts.push(`${String(Math.round(km * 10) / 10).replace('.', ',')} km${a.min ? ',' : ''}`);
+      const min = U.parseNumber(a.min);
+      if (min != null && min >= 1) parts.push(fmtMinutes(min));
+      return parts.join(' ');
+    }).join('; ').slice(0, 200);
+  }
+
+  // A training name from the settings for the day's Garmin activities, or null. Strength sessions
+  // can't be told apart (Upper A or Lower?), so only named cardio is matched: "Rower", "Bieganie",
+  // else "Inne Cardio" when the settings have it.
+  function garminTraining(list, trainings) {
+    const longest = list.slice().sort((a, b) => (U.parseNumber(b.min) || 0) - (U.parseNumber(a.min) || 0));
+    for (const a of longest) {
+      const label = garminLabel(a);
+      if (trainings.includes(label)) return label;
+      if (CARDIO.includes(label) && trainings.includes('Inne Cardio')) return 'Inne Cardio';
+    }
+    return null;
+  }
+
+  // Days from scripts/garmin_fetch.py → the diary. Garmin-only fields are Garmin's and get updated.
+  // Sleep, sleep score, weight and training are filled only when empty: what you type always wins.
+  // A missing key or null means "Garmin didn't say", never "delete".
+  function applyGarmin(data, days) {
+    const next = clone(data);
+    const changed = [];
+    (Array.isArray(days) ? days : []).forEach((g) => {
+      if (!g || !U.isValidKey(g.date)) return;
+      const i = next.entries.findIndex((e) => e.date === g.date);
+      const before = i >= 0 ? next.entries[i] : null;
+      const e = Object.assign({ date: g.date }, before || {});
+      const has = (k) => g[k] !== undefined && g[k] !== null;
+      GARMIN_FIELDS.forEach((k) => { if (k !== 'activity' && has(k)) e[k] = g[k]; });
+      if (Array.isArray(g.activities)) {
+        if (g.activities.length) e.activity = activitySummary(g.activities);
+        else delete e.activity;
+        const training = garminTraining(g.activities, next.settings.trainings || []);
+        if (training && !e.training) e.training = training;
+      }
+      ['sleep', 'sleepScore', 'weight'].forEach((k) => { if (has(k) && e[k] === undefined) e[k] = g[k]; });
+      const clean = cleanEntry(e);
+      if (!clean || JSON.stringify(clean) === JSON.stringify(before && cleanEntry(before))) return;
+      if (i >= 0) next.entries[i] = clean;
+      else next.entries.push(clean);
+      changed.push(g.date);
+    });
+    return { data: normalize(next), days: changed.sort() };
+  }
+
+  const garminMessage = (days) => `garmin: ${days.join(', ')}`;
 
   // ---------- weekly commit to main ----------
 
@@ -627,6 +742,7 @@
     load, canWrite, upsertEntry, deleteEntry, saveSettings, enterDemo, exitDemo,
     getConfig, saveConfig, clearConfig, getToken, setToken, clearToken, fileUrl,
     normalize, normalizeSettings, cleanEntry, serialize, parse, entryMessage, settingsMessage, demoData,
-    weekWindow, weeklyMerge, weeklyMessage
+    weekWindow, weeklyMerge, weeklyMessage,
+    FORM_FIELDS, GARMIN_FIELDS, HRV_STATUSES, mergeForm, applyGarmin, activitySummary, garminMessage
   };
 })(window.DF = window.DF || {});

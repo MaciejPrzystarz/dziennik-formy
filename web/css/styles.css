@@ -678,6 +678,7 @@ button.wk-day:hover { border-color: var(--plate-green); box-shadow: 0 0 12px -3p
   grid-template-columns: 50px minmax(0, 1.1fr) minmax(0, 1fr) minmax(0, 1.2fr) minmax(0, 0.9fr) 34px;
   grid-template-areas:
     "day weight kcal train sleep mood"
+    "day garmin garmin garmin garmin garmin"
     "day note note note note note";
   align-items: center;
   gap: 2px 14px;
@@ -702,6 +703,8 @@ button.log-row:hover { background: linear-gradient(90deg, rgba(164, 92, 255, 0.1
 .log-train { grid-area: train; display: flex; align-items: center; gap: 8px; min-width: 0; }
 .log-mood { grid-area: mood; font-size: 20px; text-align: center; }
 .log-sleep { grid-area: sleep; font-variant-numeric: tabular-nums; white-space: nowrap; }
+/* Garmin's numbers for the day: one quiet line under the stats. */
+.log-garmin { grid-area: garmin; color: var(--muted); font-size: 13px; font-variant-numeric: tabular-nums; }
 .log-note {
   grid-area: note;
   display: -webkit-box;
@@ -934,7 +937,9 @@ textarea { min-height: 66px; line-height: 1.4; resize: vertical; }
   .chart-box { height: 280px; }
   .log-row {
     grid-template-columns: 50px 170px 140px 160px 110px 36px minmax(0, 1fr);
-    grid-template-areas: "day weight kcal train sleep mood note";
+    grid-template-areas:
+      "day weight kcal train sleep mood note"
+      "day garmin garmin garmin garmin garmin note";
     column-gap: 16px;
   }
   .log-note { padding-left: 8px; }
@@ -978,6 +983,7 @@ textarea { min-height: 66px; line-height: 1.4; resize: vertical; }
     grid-template-areas:
       "day weight kcal mood"
       "day train sleep sleep"
+      "day garmin garmin garmin"
       "day note note note";
     column-gap: 10px;
   }

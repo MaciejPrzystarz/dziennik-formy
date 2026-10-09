@@ -1,0 +1,84 @@
+# Weekly commit: on Sunday at 10:00 (Europe/Warsaw) the finished week, Sunday to Saturday, goes from the
+# working branch "bufor" to main as one commit. On 2026-10-11 that is 2026-10-04 to 2026-10-10.
+# Day to day the app and Claude save to "bufor", so main only gets this one commit a week.
+# Afterwards "bufor" is rebuilt on top of the new main (its old save commits disappear), keeping
+# whatever main doesn't have yet, e.g. a Sunday morning weigh-in.
+# Running it again (or by hand: Actions -> Weekly commit -> Run workflow) changes nothing new.
+name: Weekly commit
+
+on:
+  schedule:
+    - cron: '0 8,9 * * 0' # 10:00 in Warsaw is 08:00 UTC in summer and 09:00 UTC in winter
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: weekly-commit
+  cancel-in-progress: false
+
+jobs:
+  commit:
+    runs-on: ubuntu-latest
+    env:
+      TZ: Europe/Warsaw
+      STAGING: bufor
+    steps:
+      - name: Only Sunday from 10:00 in Warsaw
+        id: gate
+        run: |
+          read -r dow hour <<< "$(date '+%u %H')"
+          if [ "${{ github.event_name }}" = schedule ] && { [ "$dow" != 7 ] || [ "$((10#$hour))" -lt 10 ]; }; then
+            echo "Nie niedziela po 10:00 w Warszawie ($dow $hour), pomijam."
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/checkout@v7
+        if: steps.gate.outputs.run == 'true'
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: actions/setup-node@v5
+        if: steps.gate.outputs.run == 'true'
+        with:
+          node-version: 24
+      - name: Move the week to main
+        if: steps.gate.outputs.run == 'true'
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          for attempt in 1 2 3; do
+            git fetch -q origin main
+            git checkout -q -B main origin/main
+            if ! git fetch -q origin "$STAGING"; then
+              echo "Brak gałęzi $STAGING: nic do przeniesienia."
+              exit 0
+            fi
+            lease=$(git rev-parse FETCH_HEAD)
+            git show "$lease:data/health.json" > "$RUNNER_TEMP/staged.json"
+
+            msg=$(node scripts/weekly-commit.mjs data/health.json "$RUNNER_TEMP/staged.json")
+            if [ -n "$msg" ]; then
+              git commit -q -m "$msg" -- data/health.json
+              if ! git push -q origin main; then sleep 5; continue; fi
+              echo "main: $msg"
+            elif git merge-base --is-ancestor origin/main "$lease"; then
+              echo "main jest aktualny, $STAGING już na nim stoi."
+              exit 0
+            fi
+
+            # "bufor" again on top of main, with the days that haven't gone to main yet.
+            git checkout -q -B "$STAGING"
+            cp "$RUNNER_TEMP/staged.json" data/health.json
+            git diff --quiet || git commit -q -m "bufor: dni czekające na kolejny tydzień" -- data/health.json
+            # Fails if the app saved something in the meantime; then the whole step runs again.
+            if git push -q --force-with-lease="$STAGING:$lease" origin "$STAGING"; then
+              echo "$STAGING przebudowany na main."
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "Nie udało się po 3 próbach." >&2
+          exit 1

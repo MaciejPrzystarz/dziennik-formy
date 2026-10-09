@@ -1,7 +1,9 @@
 # Dziennik formy: zasady dla Claude'a
 
-Dane: `data/health.json`. To jedyne źródło prawdy dla aplikacji w `web/`. Aplikacja zapisuje ten sam plik
-przez GitHub API, więc przed każdą zmianą pobierz jego aktualną wersję.
+Dane: `data/health.json` na gałęzi `bufor`. To aktualna wersja dla aplikacji w `web/`: aplikacja czyta i zapisuje ten
+plik przez GitHub API, więc przed każdą zmianą pobierz jego aktualną wersję. `main` dostaje dane tylko raz w tygodniu
+(niżej, „Cotygodniowy commit”), więc między niedzielami jest w tyle. Gdy gałęzi `bufor` jeszcze nie ma, czytaj z `main`,
+a przed zapisem utwórz `bufor` z `main` (krok 0 niżej).
 
 ## Gdy użytkownik podaje dane dnia
 
@@ -10,7 +12,7 @@ Przykłady: „dziś 84,2, 2450 kcal, Upper A, 4/5”, „wczoraj rower 40 km, s
 
 1. Ustal datę (dziś, wczoraj, konkretny dzień; strefa Europe/Warsaw). Jeśli nie wynika z wiadomości, zapytaj.
 2. Znajdź wpis z tą datą. Jest: zmień tylko pola podane teraz, resztę zostaw. Nie ma: dodaj nowy wpis.
-3. Zapisz plik, zrób commit i push (albo PUT przez API, niżej).
+3. Zapisz plik na gałęzi `bufor`: commit i push na `bufor` (albo PUT przez API, niżej). Nigdy bezpośrednio na `main`.
 4. Odpowiedz jedną linią: co zapisano. Na prośbę policz średnią z 7 dni lub zmianę z pliku.
 
 ## Format
@@ -42,14 +44,27 @@ Przykłady: „dziś 84,2, 2450 kcal, Upper A, 4/5”, „wczoraj rower 40 km, s
   wpis, w tej kolejności.
 - Usunięcie: `log: usuń 2026-09-28`
 - Cele: `settings: cel 78 kg do 2027-03-31, 2450 kcal, B 160 g, T 70 g, W 290 g, 4 treningi/tydz.` (cele makro tylko te, które są).
-- Gałąź `main`. Zmieniaj tylko `data/health.json`, chyba że użytkownik prosi o zmiany w aplikacji.
+- Dane: gałąź `bufor`. Zmieniaj tylko `data/health.json`, chyba że użytkownik prosi o zmiany w aplikacji. Zmiany aplikacji
+  (`web/`, `tests/`, `scripts/`, `.github/`) idą na `main` jak dotąd.
 - Przy zmianach w `web/js/` uruchom testy: `tests/index.html` w przeglądarce albo `node tests/run.mjs`.
+
+## Cotygodniowy commit
+
+W niedzielę o 10:00 (Europe/Warsaw) `.github/workflows/weekly.yml` przenosi zakończony tydzień z `bufor` na `main` jednym
+commitem: tydzień to niedziela–sobota przed tą niedzielą (11.10.2026 → 2026-10-04 do 2026-10-10). Razem z nim idą
+poprawki starszych dni i zmiany celów. Dni od niedzieli włącznie zostają na `bufor` do kolejnego tygodnia. Potem `bufor`
+jest przebudowywany na nowym `main` (stare commity zapisów znikają). Commit: `log: tydzień 2026-10-04 – 2026-10-10 (7 dni
+z wpisem, poprawki: 2026-10-01, cele)`. Logika: `weekWindow` i `weeklyMerge` w `web/js/store.js`, skrypt
+`scripts/weekly-commit.mjs`. Ręcznie: Actions → Weekly commit → Run workflow (powtórne uruchomienie nic nie psuje).
 
 ## Cotygodniowe podsumowanie
 
-W niedzielę wieczorem zaplanowane zadanie czyta `data/health.json` i wysyła podsumowanie tygodnia (pn–nd): średnia waga
-i zmiana wobec poprzedniego tygodnia, kalorie i makro wobec celów, treningi wobec `weeklyTrainings`, sen, samopoczucie,
-najmocniejsza zależność z danych i jedna konkretna rada na kolejny tydzień. Tylko czyta dane: nic nie zapisuje w repo.
+W niedzielę o 10:00 (Europe/Warsaw) zaplanowane zadanie czyta `data/health.json` z gałęzi `bufor` i wysyła jeden mail
+z podsumowaniem tego samego tygodnia co commit (niedziela–sobota), bez ponowień. Oprócz liczb (waga, kalorie i makro
+wobec celów, treningi wobec `weeklyTrainings`, sen, samopoczucie) wyciąga wnioski: czyta notatki (`note`) z każdego dnia,
+łączy je z danymi, szuka zależności (sen, treningi, kalorie, waga dzień po dniu), porównuje z poprzednimi tygodniami
+i daje 1–2 konkretne działania na kolejny tydzień. Dlatego warto w `note` pisać, jak poszedł dzień. Tylko czyta dane:
+nic nie zapisuje w repo.
 
 ## Zapis przez GitHub API (bez lokalnego repo)
 
@@ -57,11 +72,18 @@ Wymaga tokenu fine-grained z uprawnieniem Contents: Read and write do tego repoz
 
 ```bash
 OWNER=<login> REPO=dziennik-formy TOKEN=<token>
-API="https://api.github.com/repos/$OWNER/$REPO/contents/data/health.json"
+REPO_API="https://api.github.com/repos/$OWNER/$REPO"
+API="$REPO_API/contents/data/health.json"
 H=(-H "Authorization: Bearer $TOKEN" -H "Accept: application/vnd.github+json")
 
+# 0. gałąź bufor, jeśli jej nie ma (422 „Reference already exists” = już jest, w porządku)
+if [ "$(curl -s -o /dev/null -w '%{http_code}' "${H[@]}" "$REPO_API/git/ref/heads/bufor")" = 404 ]; then
+  MAIN=$(curl -s "${H[@]}" "$REPO_API/git/ref/heads/main" | jq -r .object.sha)
+  curl -s -X POST "${H[@]}" "$REPO_API/git/refs" -d "{\"ref\": \"refs/heads/bufor\", \"sha\": \"$MAIN\"}" > /dev/null
+fi
+
 # 1. aktualny plik i sha, zawsze tuż przed zapisem
-curl -s "${H[@]}" "$API?ref=main" > resp.json
+curl -s "${H[@]}" "$API?ref=bufor" > resp.json
 SHA=$(jq -r .sha resp.json)
 jq -r .content resp.json | base64 -d > health.json
 
@@ -70,8 +92,9 @@ jq -r .content resp.json | base64 -d > health.json
 # 3. zapis
 jq -n --arg message "log: 2026-09-28 (84.2 kg, 2450 kcal)" --arg sha "$SHA" \
       --arg content "$(base64 -w0 health.json)" \
-      '{message: $message, content: $content, sha: $sha, branch: "main"}' |
+      '{message: $message, content: $content, sha: $sha, branch: "bufor"}' |
   curl -s -X PUT "${H[@]}" "$API" -d @- | jq -r '.commit.html_url // .message'
 ```
 
-409 lub 422 z informacją o `sha` oznacza, że plik zmienił się w międzyczasie: powtórz od kroku 1.
+409 lub 422 z informacją o `sha` oznacza, że plik zmienił się w międzyczasie (np. niedzielna przebudowa `bufor`):
+powtórz od kroku 1.

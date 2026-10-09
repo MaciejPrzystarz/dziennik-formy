@@ -6,5 +6,6 @@ window.APP_CONFIG = {
   owner: 'MaciejPrzystarz',
   repo: 'dziennik-formy',
   branch: 'main',
-  dataPath: 'data/health.json'
+  dataPath: 'data/health.json',
+  staging: 'bufor' // tu zapisuje aplikacja i Claude; do main co niedzielę o 10:00 (.github/workflows/weekly.yml)
 };

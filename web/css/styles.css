@@ -90,9 +90,9 @@ body::before {
     radial-gradient(1.5px 1.5px at 199px 379px, rgba(220, 200, 255, 0.85), transparent);
   background-size: 211px 211px, 211px 211px, 211px 211px, 211px 211px, 211px 211px,
     409px 409px, 409px 409px, 409px 409px, 409px 409px, 409px 409px;
-  animation: twinkle 7s ease-in-out infinite alternate;
+  opacity: 0.8;
+  /* No twinkling: an endless animation on a full-screen layer kept the GPU busy and made scrolling stutter. */
 }
-@keyframes twinkle { from { opacity: 0.55; } to { opacity: 1; } }
 
 h1, h2, h3, p, ul, dl, dd, figure { margin: 0; }
 ul { padding: 0; list-style: none; }
@@ -265,6 +265,7 @@ a { color: inherit; text-underline-offset: 2px; }
     rgba(255, 63, 99, 0.16) 66%,
     transparent 71%);
   animation: horizon 6s ease-in-out infinite alternate;
+  will-change: transform, opacity;
 }
 .barbell::after {
   width: 64%;
@@ -278,9 +279,10 @@ a { color: inherit; text-underline-offset: 2px; }
     transparent);
   filter: blur(2px);
 }
+/* Only transform and opacity: the GPU animates those without repainting (a filter here repainted every frame). */
 @keyframes horizon {
-  from { filter: brightness(0.9); transform: translate(-50%, -50%) scale(0.97); }
-  to { filter: brightness(1.15); transform: translate(-50%, -50%) scale(1.03); }
+  from { opacity: 0.85; transform: translate(-50%, -50%) scale(0.97); }
+  to { opacity: 1; transform: translate(-50%, -50%) scale(1.03); }
 }
 .barbell-caption { margin-top: 10px; text-align: center; color: var(--platform-muted); font-size: 14px; }
 
@@ -592,6 +594,8 @@ a { color: inherit; text-underline-offset: 2px; }
 
 /* Weeks: one calendar row per week, newest first, with the week's averages under it. */
 .weeks { margin-top: 44px; }
+/* Long lists below the fold: the browser skips their layout and painting until they scroll into view. */
+.weeks, .logbook { content-visibility: auto; contain-intrinsic-size: auto 900px; }
 .wk-head, .wk-days { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 5px; }
 .wk-head { margin-bottom: 6px; color: var(--muted); font-size: 12.5px; text-align: center; }
 
@@ -789,7 +793,7 @@ dialog.sheet {
   box-shadow: 0 0 60px -10px var(--glow-violet), 0 30px 80px rgba(0, 0, 0, 0.6);
 }
 dialog.sheet[open] { display: flex; flex-direction: column; animation: sheet-in 0.22s ease-out; }
-dialog.sheet::backdrop { background: rgba(3, 2, 8, 0.7); backdrop-filter: blur(4px); }
+dialog.sheet::backdrop { background: rgba(3, 2, 8, 0.8); }
 @keyframes sheet-in { from { transform: translateY(16px); opacity: 0; } }
 @keyframes sheet-up { from { transform: translateY(100%); } }
 

@@ -5,9 +5,9 @@ name: Tests
 on:
   push:
     branches: [main]
-    paths: ['web/js/**', 'tests/**', '.github/workflows/tests.yml']
+    paths: ['web/js/**', 'tests/**', 'scripts/**', '.github/workflows/tests.yml']
   pull_request:
-    paths: ['web/js/**', 'tests/**', '.github/workflows/tests.yml']
+    paths: ['web/js/**', 'tests/**', 'scripts/**', '.github/workflows/tests.yml']
   workflow_dispatch:
 
 permissions:

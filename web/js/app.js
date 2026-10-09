@@ -978,7 +978,7 @@
       setBusy(false, btn);
       closeSheet(entrySheet, true);
       update('save', { weightDate: entry.weight != null ? entry.date : null });
-      toast(res.unchanged ? 'Bez zmian' : 'Wpis zapisany', res.url ? { href: res.url, label: 'Zobacz commit' } : null);
+      toast(res.unchanged ? 'Bez zmian' : 'Wpis zapisany');
     } catch (err) {
       setBusy(false, btn);
       showFormError(err.message);
@@ -1003,7 +1003,7 @@
       setBusy(false, btn);
       closeSheet(entrySheet, true);
       update('save');
-      toast('Wpis usunięty', res.url ? { href: res.url, label: 'Zobacz commit' } : null);
+      toast('Wpis usunięty');
     } catch (err) {
       setBusy(false, btn);
       showFormError(err.message);
@@ -1020,11 +1020,14 @@
     if (!cfg) {
       html = 'Nie wiadomo, z którego repozytorium czytać. Uzupełnij owner i repo w pliku web/config.js.';
     } else {
-      const link = `<a href="${esc(store.fileUrl(cfg))}" target="_blank" rel="noopener">${esc(`${cfg.owner}/${cfg.repo}`)}</a>`;
+      const branch = st.branch || cfg.staging;
+      const link = `<a href="${esc(store.fileUrl(cfg, branch))}" target="_blank" rel="noopener">${esc(`${cfg.owner}/${cfg.repo}`)}</a>`;
       const write = token ? 'Zapis włączony.' : 'Bez tokenu: tylko podgląd.';
+      const weekly = cfg.staging === cfg.branch ? ''
+        : ` Wpisy zapisują się na gałęzi ${esc(cfg.staging)}, a do ${esc(cfg.branch)} trafiają jednym commitem w niedzielę o 10:00 (tydzień od niedzieli do soboty).`;
       html = st.mode !== 'demo' && st.error
         ? `Połączenie z ${link} nie działa. ${esc(st.error.message)}`
-        : `Dane z ${link}, gałąź ${esc(cfg.branch)}. ${write}`;
+        : `Dane z ${link}, gałąź ${esc(branch)}. ${write}${weekly}`;
     }
     $('#conn-status').innerHTML = html;
   }

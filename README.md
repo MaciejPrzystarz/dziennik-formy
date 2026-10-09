@@ -55,12 +55,19 @@ ani do repozytorium. Bez tokenu aplikacja działa w trybie podglądu.
 
 Napisz np. „dziś 84,2, 2450 kcal, Upper A, samopoczucie 4”. Claude zmienia `data/health.json` według `CLAUDE.md`:
 
-- **Claude Code** (np. w IntelliJ): edytuje plik, robi commit i push.
+- **Claude Code** (np. w IntelliJ): edytuje plik na gałęzi `bufor`, robi commit i push.
 - **claude.ai**: potrzebuje dostępu do repo przez GitHub API. Użyj osobnego tokenu jak wyżej, z krótkim terminem
   ważności, i usuń go po sesji.
 
 Aplikacja przy każdym zapisie pobiera świeży plik i łączy zmiany pole po polu, więc wpis z czatu i wpis z telefonu
 z tego samego dnia się nie nadpisują. Po powrocie do karty dane odświeżają się same.
+
+## Jeden commit na tydzień
+
+Wpisy z aplikacji i z czatu zapisują się na gałęzi `bufor` i od razu są widoczne na stronie. Na `main` trafiają raz
+w tygodniu: w niedzielę o 10:00 `.github/workflows/weekly.yml` przenosi tydzień od niedzieli do soboty jednym commitem
+(np. 11.10 → 4.10–10.10), a `bufor` przebudowuje na nowym `main`. Wpis z niedzielnego poranka czeka na kolejny tydzień.
+Podsumowanie tygodnia przychodzi mailem w niedzielę o 10:00.
 
 ## Format danych
 

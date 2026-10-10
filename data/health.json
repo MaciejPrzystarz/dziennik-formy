@@ -21,6 +21,6 @@
     {"date": "2026-10-06", "weight": 86.7, "kcal": 2800, "protein": 180, "fat": 80, "carbs": 350, "training": "Upper A", "mood": 3, "sleep": 6.9, "sleepScore": 79, "note": "Dzien spotka w biurze + kolacja firmowa. Ciężko powiedzieć ile kcal"},
     {"date": "2026-10-07", "weight": 86.5, "kcal": 2400, "protein": 170, "fat": 70, "carbs": 275, "mood": 2, "sleep": 7.6, "sleepScore": 68, "note": "Zmęczony po wczorajszymi dniu calym"},
     {"date": "2026-10-08", "weight": 86.5, "kcal": 2500, "mood": 4, "sleep": 9, "sleepScore": 95, "note": "Czułem sie extra, ale mało kofeiny, mniej niz zazwyczaj i mnie ścieło"},
-    {"date": "2026-10-09", "weight": 86.4, "sleep": 7.8, "sleepScore": 89}
+    {"date": "2026-10-09", "weight": 86.4, "kcal": 2320, "protein": 160, "fat": 40, "carbs": 330, "training": "Lower", "mood": 4, "sleep": 7.8, "sleepScore": 89}
   ]
 }

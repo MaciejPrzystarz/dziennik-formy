@@ -22,6 +22,7 @@
     {"date": "2026-10-07", "weight": 86.5, "kcal": 2400, "protein": 170, "fat": 70, "carbs": 275, "mood": 2, "sleep": 7.6, "sleepScore": 68, "note": "Zmęczony po wczorajszymi dniu calym"},
     {"date": "2026-10-08", "weight": 86.5, "kcal": 2500, "mood": 4, "sleep": 9, "sleepScore": 95, "note": "Czułem sie extra, ale mało kofeiny, mniej niz zazwyczaj i mnie ścieło"},
     {"date": "2026-10-09", "weight": 86.4, "kcal": 2720, "protein": 160, "fat": 85, "carbs": 330, "training": "Lower", "mood": 4, "sleep": 7.8, "sleepScore": 89},
-    {"date": "2026-10-11", "kcal": 3000, "sleep": 8.5, "sleepScore": 95, "note": "Nie wiadomo ile kcal bo taki dzien, ale strzelilbtm jakies 3000"}
+    {"date": "2026-10-11", "kcal": 3000, "sleep": 8.5, "sleepScore": 95, "note": "Nie wiadomo ile kcal bo taki dzien, ale strzelilbtm jakies 3000"},
+    {"date": "2026-10-12", "kcal": 2600, "training": "Upper A", "sleep": 8.2, "sleepScore": 90, "note": "Dobrze dobrze, młyn w pracy sie zaczął wiec tak srednio idzie monitorowanie"}
   ]
 }

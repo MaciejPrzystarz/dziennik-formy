@@ -24,6 +24,7 @@
     {"date": "2026-10-09", "weight": 86.4, "kcal": 2720, "protein": 160, "fat": 85, "carbs": 330, "training": "Lower", "mood": 4, "sleep": 7.8, "sleepScore": 89},
     {"date": "2026-10-11", "kcal": 3000, "sleep": 8.5, "sleepScore": 95, "note": "Nie wiadomo ile kcal bo taki dzien, ale strzelilbtm jakies 3000"},
     {"date": "2026-10-12", "kcal": 2600, "training": "Upper A", "sleep": 8.2, "sleepScore": 90, "note": "Dobrze dobrze, młyn w pracy sie zaczął wiec tak srednio idzie monitorowanie"},
+    {"date": "2026-10-13", "weight": 86.7, "kcal": 4000, "mood": 4, "sleep": 8, "sleepScore": 88, "note": "4 browary i pizza aaaaaa"},
     {"date": "2026-10-14", "weight": 88.3, "mood": 2, "sleep": 7, "sleepScore": 44, "note": "Wczoraj 4 piwa"}
   ]
 }

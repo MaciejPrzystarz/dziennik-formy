@@ -26,6 +26,7 @@
     {"date": "2026-10-12", "kcal": 2600, "training": "Upper A", "sleep": 8.2, "sleepScore": 90, "note": "Dobrze dobrze, młyn w pracy sie zaczął wiec tak srednio idzie monitorowanie"},
     {"date": "2026-10-13", "weight": 86.7, "kcal": 4000, "mood": 4, "sleep": 8, "sleepScore": 88, "note": "4 browary i pizza aaaaaa"},
     {"date": "2026-10-14", "weight": 88.3, "mood": 2, "sleep": 7, "sleepScore": 44, "note": "Wczoraj 4 piwa"},
-    {"date": "2026-10-15", "weight": 87.2, "kcal": 2500, "protein": 200, "fat": 59, "carbs": 287, "training": "Lower", "sleep": 7.5, "sleepScore": 89, "note": "Powrot do liczenia i tryhardu"}
+    {"date": "2026-10-15", "weight": 87.2, "kcal": 2500, "protein": 200, "fat": 59, "carbs": 287, "training": "Lower", "sleep": 7.5, "sleepScore": 89, "note": "Powrot do liczenia i tryhardu"},
+    {"date": "2026-10-16", "weight": 87, "kcal": 2900, "protein": 175, "fat": 60, "carbs": 297, "training": "Upper B", "mood": 3, "sleep": 8, "sleepScore": 84, "note": "Wczoraj powrot do liczenia i tryhard. Dzisiaj sushi wiec troche wyjebalo miarke"}
   ]
 }

@@ -22,6 +22,7 @@
     {"date": "2026-10-07", "weight": 86.5, "kcal": 2400, "protein": 170, "fat": 70, "carbs": 275, "mood": 2, "sleep": 7.6, "sleepScore": 68, "note": "Zmęczony po wczorajszymi dniu calym"},
     {"date": "2026-10-08", "weight": 86.5, "kcal": 2500, "mood": 4, "sleep": 9, "sleepScore": 95, "note": "Czułem sie extra, ale mało kofeiny, mniej niz zazwyczaj i mnie ścieło"},
     {"date": "2026-10-09", "weight": 86.4, "kcal": 2320, "protein": 160, "fat": 40, "carbs": 330, "training": "Lower", "mood": 4, "sleep": 7.8, "sleepScore": 89},
-    {"date": "2026-10-10", "kcal": 3000, "protein": 180, "fat": 100, "carbs": 350, "training": "Upper B", "mood": 4, "sleep": 8.5, "sleepScore": 85, "note": "w Lesznie jedzenie na oko"}
+    {"date": "2026-10-10", "kcal": 3000, "protein": 180, "fat": 100, "carbs": 350, "training": "Upper B", "mood": 4, "sleep": 8.5, "sleepScore": 85, "note": "w Lesznie jedzenie na oko"},
+    {"date": "2026-10-19", "weight": 88.1, "sleep": 7.8, "sleepScore": 93}
   ]
 }

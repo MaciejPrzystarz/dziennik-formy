@@ -24,6 +24,6 @@
     {"date": "2026-10-09", "weight": 86.4, "kcal": 2320, "protein": 160, "fat": 40, "carbs": 330, "training": "Lower", "mood": 4, "sleep": 7.8, "sleepScore": 89},
     {"date": "2026-10-10", "kcal": 3000, "protein": 180, "fat": 100, "carbs": 350, "training": "Upper B", "mood": 4, "sleep": 8.5, "sleepScore": 85, "note": "w Lesznie jedzenie na oko"},
     {"date": "2026-10-19", "weight": 88.1, "sleep": 7.8, "sleepScore": 93},
-    {"date": "2026-10-20", "weight": 87, "mood": 4, "sleep": 7.7, "sleepScore": 97}
+    {"date": "2026-10-20", "weight": 86.7, "kcal": 2300, "mood": 1, "sleep": 7.7, "sleepScore": 97}
   ]
 }

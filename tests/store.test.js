@@ -158,6 +158,35 @@
     assert.deepEqual(again.days, []);
   });
 
+  test('weeklyMerge: a stale working branch keeps days saved straight to main (2026-10-18)', () => {
+    const base = store.normalize({
+      settings: { kcalTarget: 2450 },
+      entries: [{ date: '2026-10-09', kcal: 2320, fat: 40 }]
+    });
+    const staged = store.normalize({ // split off main, then one save
+      settings: { kcalTarget: 2450 },
+      entries: [{ date: '2026-10-09', kcal: 2320, fat: 40 }, { date: '2026-10-10', kcal: 3000 }]
+    });
+    const main = store.normalize({ // saves that went to main instead
+      settings: { kcalTarget: 2450 },
+      entries: [
+        { date: '2026-10-09', kcal: 2720, fat: 85 },
+        { date: '2026-10-12', kcal: 2600 },
+        { date: '2026-10-16', weight: 87 },
+        { date: '2026-10-19', weight: 88.1 } // next week
+      ]
+    });
+    const m = store.weeklyMerge(main, staged, '2026-10-17', base);
+    assert.deepEqual(m.data.entries.map((e) => [e.date, e.kcal || e.weight]),
+      [['2026-10-09', 2720], ['2026-10-10', 3000], ['2026-10-12', 2600], ['2026-10-16', 87], ['2026-10-19', 88.1]]);
+    assert.deepEqual(m.days, ['2026-10-10']);
+    assert.deepEqual(m.staged.entries, m.data.entries, 'the rebuilt working branch has everything too');
+
+    const gone = store.weeklyMerge(main, store.normalize({ settings: base.settings, entries: [] }), '2026-10-17', base);
+    assert.deepEqual(gone.data.entries.map((e) => e.date), ['2026-10-12', '2026-10-16', '2026-10-19'],
+      'a day deleted on the working branch is deleted on main');
+  });
+
   test('cleanEntry: Garmin fields validated, saved after the logged ones, note last', () => {
     const e = store.cleanEntry({
       date: '2026-10-09', note: 'x', vo2max: 47.26, hrvStatus: 'BALANCED', hrv: 48.4, steps: '8432',

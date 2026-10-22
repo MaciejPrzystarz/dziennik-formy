@@ -58,8 +58,10 @@ jobs:
             fi
             lease=$(git rev-parse FETCH_HEAD)
             git show "$lease:data/health.json" > "$RUNNER_TEMP/staged.json"
+            # Where bufor split off main: days saved straight to main since then are kept, not wiped.
+            git show "$(git merge-base origin/main "$lease"):data/health.json" > "$RUNNER_TEMP/base.json"
 
-            msg=$(node scripts/weekly-commit.mjs data/health.json "$RUNNER_TEMP/staged.json")
+            msg=$(node scripts/weekly-commit.mjs data/health.json "$RUNNER_TEMP/staged.json" --base "$RUNNER_TEMP/base.json")
             if [ -n "$msg" ]; then
               git commit -q -m "$msg" -- data/health.json
               if ! git push -q origin main; then sleep 5; continue; fi

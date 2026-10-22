@@ -632,12 +632,28 @@
     return { start: U.addDays(end, -6), end };
   }
 
-  // main + the working branch → the new main. Days up to `end` and the settings come from the working
-  // branch (so edits and deletions of older days come along too), later days stay as they are on main
-  // and wait for their own week.
-  function weeklyMerge(main, staged, end) {
-    const data = normalize(Object.assign({}, staged, {
-      entries: [...staged.entries.filter((e) => e.date <= end), ...main.entries.filter((e) => e.date > end)]
+  // Three-way merge by day: what the working branch changed since `base` (where it split off main)
+  // wins, everything else stays as on main. So a stale working branch never wipes days that were
+  // saved straight to main (on 2026-10-18 that deleted 2026-10-11..16). Without `base` the working
+  // branch wins everywhere.
+  function combine(main, staged, base = main) {
+    const byDate = (d) => new Map(d.entries.map((e) => [e.date, JSON.stringify(e)]));
+    const [m, s, b] = [byDate(main), byDate(staged), byDate(base)];
+    const entries = [...new Set([...m.keys(), ...s.keys()])]
+      .map((k) => (s.get(k) !== b.get(k) ? s.get(k) : m.get(k)))
+      .filter(Boolean)
+      .map((line) => JSON.parse(line));
+    const keep = JSON.stringify(staged.settings) === JSON.stringify(base.settings) ? main : staged;
+    return normalize(Object.assign({}, keep, { entries }));
+  }
+
+  // main + the working branch → the new main (`data`) and the new working branch (`staged`). Days up
+  // to `end` and the settings come from the working branch (so edits and deletions of older days come
+  // along too), later days stay as they are on main and wait for their own week.
+  function weeklyMerge(main, staged, end, base) {
+    const all = combine(main, staged, base);
+    const data = normalize(Object.assign({}, all, {
+      entries: [...all.entries.filter((e) => e.date <= end), ...main.entries.filter((e) => e.date > end)]
     }));
     const line = (d) => new Map(d.entries.filter((e) => e.date <= end).map((e) => [e.date, JSON.stringify(e)]));
     const before = line(main);
@@ -646,7 +662,7 @@
       .filter((k) => before.get(k) !== after.get(k))
       .sort();
     const settings = JSON.stringify(main.settings) !== JSON.stringify(data.settings);
-    return { data, days, settings, changed: serialize(data) !== serialize(main) };
+    return { data, staged: all, days, settings, changed: serialize(data) !== serialize(main) };
   }
 
   function weeklyMessage(win, merged) {

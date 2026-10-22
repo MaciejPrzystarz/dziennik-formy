@@ -7,5 +7,5 @@ window.APP_CONFIG = {
   repo: 'dziennik-formy',
   branch: 'main',
   dataPath: 'data/health.json',
-  staging: 'bufor' // tu zapisuje aplikacja i Claude; do main co niedzielę o 08:00 (.github/workflows/weekly.yml)
+  staging: 'bufor' // tu zapisuje aplikacja i Claude; do main co sobotę o 23:00 (.github/workflows/weekly.yml)
 };

@@ -1,14 +1,14 @@
-# Weekly commit: on Sunday at 08:00 (Europe/Warsaw) the finished week, Sunday to Saturday, goes from the
-# working branch "bufor" to main as one commit. On 2026-10-11 that is 2026-10-04 to 2026-10-10.
+# Weekly commit: on Saturday at 23:00 (Europe/Warsaw) the week ending that day, Sunday to Saturday, goes from the
+# working branch "bufor" to main as one commit. On 2026-10-10 that is 2026-10-04 to 2026-10-10.
 # Day to day the app and Claude save to "bufor", so main only gets this one commit a week.
 # Afterwards "bufor" is rebuilt on top of the new main (its old save commits disappear), keeping
-# whatever main doesn't have yet, e.g. a Sunday morning weigh-in.
+# whatever main doesn't have yet, e.g. a late Saturday entry (it comes along next week).
 # Running it again (or by hand: Actions -> Weekly commit -> Run workflow) changes nothing new.
 name: Weekly commit
 
 on:
   schedule:
-    - cron: '0 6,7 * * 0' # 08:00 in Warsaw is 06:00 UTC in summer and 07:00 UTC in winter
+    - cron: '0 21,22 * * 6' # 23:00 in Warsaw is 21:00 UTC in summer and 22:00 UTC in winter
   workflow_dispatch:
 
 permissions:
@@ -25,16 +25,21 @@ jobs:
       TZ: Europe/Warsaw
       STAGING: bufor
     steps:
-      - name: Only Sunday from 08:00 in Warsaw
+      # A run delayed past midnight still goes on Sunday: then the finished week is the same one.
+      - name: Only Saturday from 23:00 in Warsaw
         id: gate
         run: |
           read -r dow hour <<< "$(date '+%u %H')"
-          if [ "${{ github.event_name }}" = schedule ] && { [ "$dow" != 7 ] || [ "$((10#$hour))" -lt 8 ]; }; then
-            echo "Nie niedziela po 08:00 w Warszawie ($dow $hour), pomijam."
+          saturday_night=$([ "$dow" = 6 ] && [ "$((10#$hour))" -ge 23 ] && echo true || echo false)
+          if [ "${{ github.event_name }}" = schedule ] && [ "$saturday_night" = false ] && [ "$dow" != 7 ]; then
+            echo "Nie sobota po 23:00 w Warszawie ($dow $hour), pomijam."
             echo "run=false" >> "$GITHUB_OUTPUT"
           else
             echo "run=true" >> "$GITHUB_OUTPUT"
           fi
+          # Saturday night: count from tomorrow, so the week ending today is the finished one.
+          if [ "$saturday_night" = true ]; then day=$(date -d tomorrow +%F); else day=$(date +%F); fi
+          echo "day=$day" >> "$GITHUB_OUTPUT"
       - uses: actions/checkout@v7
         if: steps.gate.outputs.run == 'true'
         with:
@@ -61,7 +66,7 @@ jobs:
             # Where bufor split off main: days saved straight to main since then are kept, not wiped.
             git show "$(git merge-base origin/main "$lease"):data/health.json" > "$RUNNER_TEMP/base.json"
 
-            msg=$(node scripts/weekly-commit.mjs data/health.json "$RUNNER_TEMP/staged.json" --base "$RUNNER_TEMP/base.json")
+            msg=$(node scripts/weekly-commit.mjs data/health.json "$RUNNER_TEMP/staged.json" "${{ steps.gate.outputs.day }}" --base "$RUNNER_TEMP/base.json")
             if [ -n "$msg" ]; then
               git commit -q -m "$msg" -- data/health.json
               if ! git push -q origin main; then sleep 5; continue; fi

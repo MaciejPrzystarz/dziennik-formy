@@ -65,8 +65,8 @@ z tego samego dnia się nie nadpisują. Po powrocie do karty dane odświeżają 
 ## Jeden commit na tydzień
 
 Wpisy z aplikacji i z czatu zapisują się na gałęzi `bufor` i od razu są widoczne na stronie. Na `main` trafiają raz
-w tygodniu: w niedzielę o 08:00 `.github/workflows/weekly.yml` przenosi tydzień od niedzieli do soboty jednym commitem
-(np. 11.10 → 4.10–10.10), a `bufor` przebudowuje na nowym `main`. Wpis z niedzielnego poranka czeka na kolejny tydzień.
+w tygodniu: w sobotę o 23:00 `.github/workflows/weekly.yml` przenosi tydzień od niedzieli do soboty jednym commitem
+(np. 10.10 → 4.10–10.10), a `bufor` przebudowuje na nowym `main`. Wpis z soboty po 23:00 idzie z kolejnym tygodniem.
 Podsumowanie tygodnia przychodzi mailem w niedzielę o 10:00.
 
 ## Garmin

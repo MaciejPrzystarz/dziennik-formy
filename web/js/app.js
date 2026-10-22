@@ -1052,7 +1052,7 @@
       const link = `<a href="${esc(store.fileUrl(cfg, branch))}" target="_blank" rel="noopener">${esc(`${cfg.owner}/${cfg.repo}`)}</a>`;
       const write = token ? 'Zapis włączony.' : 'Bez tokenu: tylko podgląd.';
       const weekly = cfg.staging === cfg.branch ? ''
-        : ` Wpisy zapisują się na gałęzi ${esc(cfg.staging)}, a do ${esc(cfg.branch)} trafiają jednym commitem w niedzielę o 08:00 (tydzień od niedzieli do soboty).`;
+        : ` Wpisy zapisują się na gałęzi ${esc(cfg.staging)}, a do ${esc(cfg.branch)} trafiają jednym commitem w sobotę o 23:00 (tydzień od niedzieli do soboty).`;
       html = st.mode !== 'demo' && st.error
         ? `Połączenie z ${link} nie działa. ${esc(st.error.message)}`
         : `Dane z ${link}, gałąź ${esc(branch)}. ${write}${weekly}`;

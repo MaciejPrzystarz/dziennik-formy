@@ -68,8 +68,16 @@
     </div>
   </div>
 
+  <nav class="tabs" id="tabs" aria-label="Widok" hidden>
+    <div class="tabs-inner" role="tablist">
+      <button type="button" role="tab" id="tab-przeglad" data-tab="przeglad" aria-selected="true">Przegląd</button>
+      <button type="button" role="tab" id="tab-tygodnie" data-tab="tygodnie" aria-selected="false">Tygodnie</button>
+      <button type="button" role="tab" id="tab-dziennik" data-tab="dziennik" aria-selected="false">Dziennik</button>
+    </div>
+  </nav>
+
   <main id="app">
-    <section class="platform" aria-labelledby="hello">
+    <section class="platform" data-panel="przeglad" aria-labelledby="hello">
       <div class="platform-inner">
         <div class="platform-top">
           <h1 id="hello">Cześć.</h1>
@@ -99,117 +107,156 @@
     </section>
 
     <div class="wrap">
-      <section class="week" id="week" aria-label="Ostatnie dni" hidden></section>
+      <section class="tiles" id="tiles" data-panel="przeglad" aria-label="Kafelki. Stuknij, żeby zobaczyć szczegóły." hidden></section>
 
-      <div class="columns" id="columns" hidden>
-        <div class="col-main">
-          <section class="block" aria-labelledby="h-weight">
-            <div class="block-head">
-              <h2 id="h-weight">Waga</h2>
-              <div class="seg" id="range" role="group" aria-label="Zakres wykresów">
-                <button type="button" data-range="30" aria-pressed="true">30 dni</button>
-                <button type="button" data-range="90" aria-pressed="false">90 dni</button>
-                <button type="button" data-range="all" aria-pressed="false">Całość</button>
-              </div>
+      <!-- Szczegóły do kafelków: każdy kafelek otwiera jedną kartę. -->
+      <div class="details" id="columns">
+      <dialog class="detail" id="d-weight" aria-labelledby="h-weight">
+        <button type="button" class="icon-btn detail-close" data-close aria-label="Zamknij">
+          <svg aria-hidden="true"><use href="#i-close"/></svg>
+        </button>
+        <section class="block" aria-labelledby="h-weight">
+          <div class="block-head">
+            <h2 id="h-weight">Waga</h2>
+            <div class="seg" id="range" role="group" aria-label="Zakres wykresów">
+              <button type="button" data-range="30" aria-pressed="true">30 dni</button>
+              <button type="button" data-range="90" aria-pressed="false">90 dni</button>
+              <button type="button" data-range="all" aria-pressed="false">Całość</button>
             </div>
-            <div class="legend" aria-hidden="true">
-              <span class="lg"><i class="sw sw-line" style="--c: var(--plate-blue)"></i>średnia z 7 dni</span>
-              <span class="lg"><i class="sw sw-dot" style="--c: var(--steel)"></i>pomiar</span>
-              <span class="lg"><i class="sw sw-dash" style="--c: var(--muted)"></i>plan</span>
-            </div>
-            <div class="chart-box">
-              <canvas id="chart-weight" role="img" aria-label="Wykres wagi: pomiary, średnia z 7 dni i plan"></canvas>
-              <p class="chart-empty" hidden>Brak pomiarów wagi w tym okresie.</p>
-            </div>
-          </section>
-
-          <section class="block" aria-labelledby="h-kcal">
-            <div class="block-head">
-              <h2 id="h-kcal">Kalorie</h2>
-            </div>
-            <div class="legend" aria-hidden="true">
-              <span class="lg"><i class="sw sw-bar" style="--c: var(--plate-green)"></i>w celu</span>
-              <span class="lg"><i class="sw sw-bar" style="--c: var(--plate-red)"></i>ponad cel</span>
-              <span class="lg"><i class="sw sw-bar" style="--c: var(--steel)"></i>poniżej celu</span>
-              <span class="lg"><i class="sw sw-dash" style="--c: var(--ink-2)"></i>cel</span>
-            </div>
-            <div class="chart-box">
-              <canvas id="chart-kcal" role="img" aria-label="Wykres kalorii dziennie względem celu"></canvas>
-              <p class="chart-empty" hidden>Brak wpisów kalorii w tym okresie.</p>
-            </div>
-          </section>
-
-          <section class="block" aria-labelledby="h-macro">
-            <div class="block-head">
-              <h2 id="h-macro">Makro</h2>
-              <p class="block-note" id="macro-note"></p>
-            </div>
-            <div class="legend" aria-hidden="true">
-              <span class="lg"><i class="sw sw-bar" style="--c: var(--macro-protein)"></i>białko</span>
-              <span class="lg"><i class="sw sw-bar" style="--c: var(--macro-fat)"></i>tłuszcze</span>
-              <span class="lg"><i class="sw sw-bar" style="--c: var(--macro-carbs)"></i>węgle</span>
-              <span class="lg"><i class="sw sw-dash" style="--c: var(--ink-2)"></i>cel kalorii</span>
-            </div>
-            <div class="chart-box">
-              <canvas id="chart-macro" role="img" aria-label="Wykres kalorii z białka, tłuszczów i węglowodanów dziennie"></canvas>
-              <p class="chart-empty" hidden>Brak wpisów makro w tym okresie.</p>
-            </div>
-            <p class="caption">Słupek to kalorie z makro: białko i węgle po 4 kcal na gram, tłuszcze 9.</p>
-          </section>
-
-          <section class="block" aria-labelledby="h-sleep">
-            <div class="block-head">
-              <h2 id="h-sleep">Sen</h2>
-            </div>
-            <div class="legend" aria-hidden="true">
-              <span class="lg"><i class="sw sw-bar" style="--c: var(--plate-blue)"></i>7 h i więcej</span>
-              <span class="lg"><i class="sw sw-bar" style="--c: var(--steel)"></i>mniej niż 7 h</span>
-              <span class="lg"><i class="sw sw-dash" style="--c: var(--ink-2)"></i>zalecane minimum</span>
-            </div>
-            <div class="chart-box">
-              <canvas id="chart-sleep" role="img" aria-label="Wykres godzin snu dziennie względem 7 godzin"></canvas>
-              <p class="chart-empty" hidden>Brak wpisów snu w tym okresie.</p>
-            </div>
-            <h3 class="chart-sub">Ocena snu <small>0–100</small></h3>
-            <div class="chart-box is-short">
-              <canvas id="chart-sleep-score" role="img" aria-label="Wykres oceny snu w skali 0–100"></canvas>
-              <p class="chart-empty" hidden>Brak ocen snu w tym okresie.</p>
-            </div>
-          </section>
-        </div>
-
-        <div class="col-side">
-          <section class="block" aria-labelledby="h-train">
-            <div class="block-head">
-              <h2 id="h-train">Treningi</h2>
-              <p class="block-note" id="train-count"></p>
-            </div>
-            <div class="heatmap" id="heatmap" role="img"></div>
-            <p class="caption" id="heat-caption"></p>
-            <div class="legend" id="heat-legend"></div>
-          </section>
-
-          <section class="block" aria-labelledby="h-insights">
-            <div class="block-head">
-              <h2 id="h-insights">Zależności</h2>
-              <p class="block-note">ostatnie 90 dni</p>
-            </div>
-            <ul class="insights" id="insights"></ul>
-            <p class="caption" id="insights-caption"></p>
-          </section>
-
-          <section class="block" aria-labelledby="h-badges">
-            <div class="block-head">
-              <h2 id="h-badges">Odznaki</h2>
-              <p class="block-note" id="badges-count"></p>
-            </div>
-            <ul class="badges" id="badges"></ul>
-            <p class="caption" id="badge-caption" aria-live="polite"></p>
-          </section>
-        </div>
+          </div>
+          <div class="legend" aria-hidden="true">
+            <span class="lg"><i class="sw sw-line" style="--c: var(--plate-blue)"></i>średnia z 7 dni</span>
+            <span class="lg"><i class="sw sw-dot" style="--c: var(--steel)"></i>pomiar</span>
+            <span class="lg"><i class="sw sw-dash" style="--c: var(--muted)"></i>plan</span>
+          </div>
+          <div class="chart-box">
+            <canvas id="chart-weight" role="img" aria-label="Wykres wagi: pomiary, średnia z 7 dni i plan"></canvas>
+            <p class="chart-empty" hidden>Brak pomiarów wagi w tym okresie.</p>
+          </div>
+        </section>
+      </dialog>
+      <dialog class="detail" id="d-kcal" aria-labelledby="h-kcal">
+        <button type="button" class="icon-btn detail-close" data-close aria-label="Zamknij">
+          <svg aria-hidden="true"><use href="#i-close"/></svg>
+        </button>
+        <section class="block" aria-labelledby="h-kcal">
+          <div class="block-head">
+            <h2 id="h-kcal">Kalorie</h2>
+          </div>
+          <div class="legend" aria-hidden="true">
+            <span class="lg"><i class="sw sw-bar" style="--c: var(--plate-green)"></i>w celu</span>
+            <span class="lg"><i class="sw sw-bar" style="--c: var(--plate-red)"></i>ponad cel</span>
+            <span class="lg"><i class="sw sw-bar" style="--c: var(--steel)"></i>poniżej celu</span>
+            <span class="lg"><i class="sw sw-dash" style="--c: var(--ink-2)"></i>cel</span>
+          </div>
+          <div class="chart-box">
+            <canvas id="chart-kcal" role="img" aria-label="Wykres kalorii dziennie względem celu"></canvas>
+            <p class="chart-empty" hidden>Brak wpisów kalorii w tym okresie.</p>
+          </div>
+        </section>
+      </dialog>
+      <dialog class="detail" id="d-macro" aria-labelledby="h-macro">
+        <button type="button" class="icon-btn detail-close" data-close aria-label="Zamknij">
+          <svg aria-hidden="true"><use href="#i-close"/></svg>
+        </button>
+        <section class="block" aria-labelledby="h-macro">
+          <div class="block-head">
+            <h2 id="h-macro">Makro</h2>
+            <p class="block-note" id="macro-note"></p>
+          </div>
+          <div class="legend" aria-hidden="true">
+            <span class="lg"><i class="sw sw-bar" style="--c: var(--macro-protein)"></i>białko</span>
+            <span class="lg"><i class="sw sw-bar" style="--c: var(--macro-fat)"></i>tłuszcze</span>
+            <span class="lg"><i class="sw sw-bar" style="--c: var(--macro-carbs)"></i>węgle</span>
+            <span class="lg"><i class="sw sw-dash" style="--c: var(--ink-2)"></i>cel kalorii</span>
+          </div>
+          <div class="chart-box">
+            <canvas id="chart-macro" role="img" aria-label="Wykres kalorii z białka, tłuszczów i węglowodanów dziennie"></canvas>
+            <p class="chart-empty" hidden>Brak wpisów makro w tym okresie.</p>
+          </div>
+          <p class="caption">Słupek to kalorie z makro: białko i węgle po 4 kcal na gram, tłuszcze 9.</p>
+        </section>
+      </dialog>
+      <dialog class="detail" id="d-sleep" aria-labelledby="h-sleep">
+        <button type="button" class="icon-btn detail-close" data-close aria-label="Zamknij">
+          <svg aria-hidden="true"><use href="#i-close"/></svg>
+        </button>
+        <section class="block" aria-labelledby="h-sleep">
+          <div class="block-head">
+            <h2 id="h-sleep">Sen</h2>
+          </div>
+          <div class="legend" aria-hidden="true">
+            <span class="lg"><i class="sw sw-bar" style="--c: var(--plate-blue)"></i>7 h i więcej</span>
+            <span class="lg"><i class="sw sw-bar" style="--c: var(--steel)"></i>mniej niż 7 h</span>
+            <span class="lg"><i class="sw sw-dash" style="--c: var(--ink-2)"></i>zalecane minimum</span>
+          </div>
+          <div class="chart-box">
+            <canvas id="chart-sleep" role="img" aria-label="Wykres godzin snu dziennie względem 7 godzin"></canvas>
+            <p class="chart-empty" hidden>Brak wpisów snu w tym okresie.</p>
+          </div>
+          <h3 class="chart-sub">Ocena snu <small>0–100</small></h3>
+          <div class="chart-box is-short">
+            <canvas id="chart-sleep-score" role="img" aria-label="Wykres oceny snu w skali 0–100"></canvas>
+            <p class="chart-empty" hidden>Brak ocen snu w tym okresie.</p>
+          </div>
+        </section>
+      </dialog>
+      <dialog class="detail" id="d-train" aria-labelledby="h-train">
+        <button type="button" class="icon-btn detail-close" data-close aria-label="Zamknij">
+          <svg aria-hidden="true"><use href="#i-close"/></svg>
+        </button>
+        <section class="block" aria-labelledby="h-train">
+          <div class="block-head">
+            <h2 id="h-train">Treningi</h2>
+            <p class="block-note" id="train-count"></p>
+          </div>
+          <div class="heatmap" id="heatmap" role="img"></div>
+          <p class="caption" id="heat-caption"></p>
+          <div class="legend" id="heat-legend"></div>
+        </section>
+      </dialog>
+      <dialog class="detail" id="d-insights" aria-labelledby="h-insights">
+        <button type="button" class="icon-btn detail-close" data-close aria-label="Zamknij">
+          <svg aria-hidden="true"><use href="#i-close"/></svg>
+        </button>
+        <section class="block" aria-labelledby="h-insights">
+          <div class="block-head">
+            <h2 id="h-insights">Zależności</h2>
+            <p class="block-note">ostatnie 90 dni</p>
+          </div>
+          <ul class="insights" id="insights"></ul>
+          <p class="caption" id="insights-caption"></p>
+        </section>
+      </dialog>
+      <dialog class="detail" id="d-badges" aria-labelledby="h-badges">
+        <button type="button" class="icon-btn detail-close" data-close aria-label="Zamknij">
+          <svg aria-hidden="true"><use href="#i-close"/></svg>
+        </button>
+        <section class="block" aria-labelledby="h-badges">
+          <div class="block-head">
+            <h2 id="h-badges">Odznaki</h2>
+            <p class="block-note" id="badges-count"></p>
+          </div>
+          <ul class="badges" id="badges"></ul>
+          <p class="caption" id="badge-caption" aria-live="polite"></p>
+        </section>
+      </dialog>
+      <dialog class="detail" id="d-mood" aria-labelledby="h-mood">
+        <button type="button" class="icon-btn detail-close" data-close aria-label="Zamknij">
+          <svg aria-hidden="true"><use href="#i-close"/></svg>
+        </button>
+        <section class="block" aria-labelledby="h-mood">
+          <div class="block-head">
+            <h2 id="h-mood">Samopoczucie</h2>
+            <p class="block-note" id="mood-note"></p>
+          </div>
+          <ol class="mood-days" id="mood-days"></ol>
+          <p class="caption" id="mood-caption"></p>
+        </section>
+      </dialog>
       </div>
 
-      <section class="block weeks" id="weeks" aria-labelledby="h-weeks" hidden>
+      <section class="block weeks" id="weeks" data-panel="tygodnie" aria-labelledby="h-weeks" hidden>
         <div class="block-head">
           <h2 id="h-weeks">Tygodnie</h2>
           <p class="block-note" id="weeks-note"></p>
@@ -221,7 +268,7 @@
         <button type="button" class="btn btn-outline" id="btn-weeks-more" hidden>Pokaż starsze tygodnie</button>
       </section>
 
-      <section class="block logbook" id="logbook" aria-labelledby="h-log" hidden>
+      <section class="block logbook" id="logbook" data-panel="dziennik" aria-labelledby="h-log" hidden>
         <div class="block-head">
           <h2 id="h-log">Dziennik</h2>
           <p class="block-note" id="log-count"></p>

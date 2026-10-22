@@ -1014,3 +1014,135 @@ textarea { min-height: 66px; line-height: 1.4; resize: vertical; }
     scroll-behavior: auto !important;
   }
 }
+
+/* ---------- tabs, tiles, detail cards ---------- */
+/* Three views instead of one long page. Przegląd: the barbell and a grid of tiles, one number per tile;
+   a tile opens its detail card (charts, lists). Tygodnie and Dziennik get the whole screen. */
+
+.tabs {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: rgba(3, 2, 8, 0.82);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--rule);
+}
+.tabs-inner {
+  display: flex;
+  gap: 6px;
+  max-width: var(--max);
+  margin: 0 auto;
+  padding: 8px calc(var(--pad) + env(safe-area-inset-right)) 8px calc(var(--pad) + env(safe-area-inset-left));
+  overflow-x: auto;
+}
+.tabs [role="tab"] {
+  flex: none;
+  padding: 7px 16px;
+  border: 1.5px solid rgba(164, 92, 255, 0.35);
+  border-radius: 999px;
+  background: var(--glass);
+  color: var(--ink-2);
+  font: 600 15px var(--font-ui);
+  cursor: pointer;
+}
+.tabs [role="tab"][aria-selected="true"] { border-color: transparent; background: var(--cosmic); color: #fff; box-shadow: 0 0 14px -3px var(--glow-violet); }
+
+body[data-tab="przeglad"] [data-panel]:not([data-panel="przeglad"]),
+body[data-tab="tygodnie"] [data-panel]:not([data-panel="tygodnie"]),
+body[data-tab="dziennik"] [data-panel]:not([data-panel="dziennik"]) { display: none !important; }
+body[data-tab="tygodnie"] .weeks,
+body[data-tab="dziennik"] .logbook { margin-top: 24px; }
+
+.tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; margin-top: 28px; }
+.tile {
+  display: grid;
+  grid-template-rows: auto auto 1fr auto;
+  gap: 6px;
+  min-height: 172px;
+  padding: 14px 16px;
+  border: 1px solid transparent;
+  border-radius: 20px;
+  background: var(--tile-bg);
+  color: var(--tile-ink);
+  font: inherit;
+  text-align: left;
+  box-shadow: 0 14px 34px -22px var(--tile-glow, transparent);
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.tile:hover { transform: translateY(-2px); box-shadow: 0 18px 38px -18px var(--tile-glow, rgba(0, 0, 0, 0.6)); }
+.tile:active { transform: scale(0.98); }
+.tile-label { font-size: 14px; font-weight: 600; opacity: 0.85; }
+.tile-value { font-family: var(--font-display); font-size: 40px; font-weight: 800; line-height: 1; }
+.tile-value small { margin-left: 0.15em; font-size: 0.45em; font-weight: 700; opacity: 0.75; }
+.tile-value .emoji { margin-right: 0.15em; font-size: 0.7em; }
+.tile-viz { display: flex; align-items: flex-end; min-height: 36px; }
+.tile-sub { font-size: 13px; line-height: 1.35; opacity: 0.88; }
+
+.tone-violet { --tile-bg: linear-gradient(150deg, #6A32D9, #4A1FA8); --tile-ink: #fff; --tile-glow: var(--glow-violet); }
+.tone-blue { --tile-bg: linear-gradient(150deg, #3159E8, #1E36B0); --tile-ink: #fff; --tile-glow: var(--glow-blue); }
+.tone-sky { --tile-bg: linear-gradient(150deg, #8BE6FF, #43C1EC); --tile-ink: #04101A; --tile-glow: rgba(92, 214, 255, 0.5); }
+.tone-red { --tile-bg: linear-gradient(150deg, #D2264C, #A3163A); --tile-ink: #fff; --tile-glow: rgba(255, 63, 99, 0.5); }
+.tone-dark { --tile-bg: var(--surface); --tile-ink: var(--ink); border-color: var(--rule); }
+
+.spark { width: 100%; height: 34px; overflow: visible; }
+.spark path { fill: none; stroke: currentColor; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+.bars { position: relative; display: flex; align-items: flex-end; gap: 4px; width: 100%; height: 36px; }
+.bars i { flex: 1; border-radius: 3px; background: currentColor; opacity: 0.5; }
+.bars i.is-hi { opacity: 1; }
+.bars i.is-empty { height: 4px; opacity: 0.2; }
+.bars b { position: absolute; left: 0; right: 0; border-top: 2px dashed currentColor; opacity: 0.75; }
+.meter { width: 100%; height: 8px; border-radius: 99px; background: color-mix(in srgb, currentColor 22%, transparent); }
+.meter i { display: block; height: 100%; border-radius: inherit; background: currentColor; }
+.tile .slots { gap: 5px; margin: 0; }
+.tile .slot { width: 14px; height: 30px; border-radius: 4px; background: currentColor; }
+.tile .slot.is-open { background: transparent; border: 1.5px dashed currentColor; opacity: 0.55; }
+.faces { display: flex; gap: 2px; font-size: 20px; line-height: 1; }
+.faces .gap { display: inline-grid; place-items: center; width: 20px; height: 20px; }
+.faces .gap::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: currentColor; opacity: 0.35; }
+
+dialog.detail {
+  width: min(760px, calc(100% - 32px));
+  max-height: min(88vh, 900px);
+  padding: 18px 20px 22px;
+  border: 1px solid var(--rule);
+  border-radius: 24px;
+  background: var(--bg);
+  color: var(--ink);
+  box-shadow: 0 30px 80px -20px rgba(0, 0, 0, 0.8);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+dialog.detail[open] { animation: detail-in 0.22s cubic-bezier(0.2, 0.8, 0.3, 1); }
+dialog.detail::backdrop { background: rgba(3, 2, 8, 0.78); -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); }
+@keyframes detail-in { from { transform: translateY(14px) scale(0.98); opacity: 0; } }
+.detail-close { position: sticky; top: 0; z-index: 2; float: right; margin: -6px -8px 0 8px; background: var(--surface); }
+.detail .block { padding-top: 0; border-top: 0; border-image: none; }
+
+.mood-days { display: grid; gap: 6px; margin: 6px 0 0; padding: 0; list-style: none; }
+.mood-days li { display: grid; grid-template-columns: 76px 30px minmax(0, 1fr); align-items: center; gap: 10px; padding: 8px 12px; border-radius: 12px; background: var(--surface); }
+.mood-days li.is-none { background: transparent; border: 1px dashed var(--rule); }
+.md-day { color: var(--muted); font-size: 14px; }
+.md-emoji { font-size: 22px; line-height: 1; }
+.md-label { font-weight: 600; }
+.is-none .md-label { color: var(--muted); font-weight: 400; }
+
+@media (max-width: 900px) {
+  .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  .tile { min-height: 156px; padding: 12px 14px; }
+  .tile-value { font-size: 34px; }
+}
+
+@media (max-width: 640px) {
+  dialog.detail {
+    width: 100%;
+    max-width: 100%;
+    max-height: 92dvh;
+    margin: auto 0 0;
+    padding: 16px 16px calc(22px + env(safe-area-inset-bottom));
+    border-width: 1px 0 0;
+    border-radius: 24px 24px 0 0;
+  }
+  dialog.detail[open] { animation: sheet-up 0.28s cubic-bezier(0.2, 0.8, 0.3, 1); }
+}

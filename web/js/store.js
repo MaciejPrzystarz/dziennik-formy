@@ -1,7 +1,7 @@
 /* Dziennik formy: loading and saving data.
    Data lives in data/health.json in a GitHub repo, read and written through the GitHub Contents API.
    Day to day the app and Claude write to a working branch (`staging`, default "bufor"), not to main.
-   Every Sunday at 10:00 a workflow moves the finished week (Sunday to Saturday) to main as one
+   Every Sunday at 08:00 a workflow moves the finished week (Sunday to Saturday) to main as one
    commit (weeklyMerge below) and rebuilds the working branch on top of it. Claude edits the same
    file from chat, so every save re-reads the file first and merges field by field instead of
    overwriting it. */

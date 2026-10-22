@@ -1,4 +1,4 @@
-# Weekly commit: on Sunday at 10:00 (Europe/Warsaw) the finished week, Sunday to Saturday, goes from the
+# Weekly commit: on Sunday at 08:00 (Europe/Warsaw) the finished week, Sunday to Saturday, goes from the
 # working branch "bufor" to main as one commit. On 2026-10-11 that is 2026-10-04 to 2026-10-10.
 # Day to day the app and Claude save to "bufor", so main only gets this one commit a week.
 # Afterwards "bufor" is rebuilt on top of the new main (its old save commits disappear), keeping
@@ -8,7 +8,7 @@ name: Weekly commit
 
 on:
   schedule:
-    - cron: '0 8,9 * * 0' # 10:00 in Warsaw is 08:00 UTC in summer and 09:00 UTC in winter
+    - cron: '0 6,7 * * 0' # 08:00 in Warsaw is 06:00 UTC in summer and 07:00 UTC in winter
   workflow_dispatch:
 
 permissions:
@@ -25,12 +25,12 @@ jobs:
       TZ: Europe/Warsaw
       STAGING: bufor
     steps:
-      - name: Only Sunday from 10:00 in Warsaw
+      - name: Only Sunday from 08:00 in Warsaw
         id: gate
         run: |
           read -r dow hour <<< "$(date '+%u %H')"
-          if [ "${{ github.event_name }}" = schedule ] && { [ "$dow" != 7 ] || [ "$((10#$hour))" -lt 10 ]; }; then
-            echo "Nie niedziela po 10:00 w Warszawie ($dow $hour), pomijam."
+          if [ "${{ github.event_name }}" = schedule ] && { [ "$dow" != 7 ] || [ "$((10#$hour))" -lt 8 ]; }; then
+            echo "Nie niedziela po 08:00 w Warszawie ($dow $hour), pomijam."
             echo "run=false" >> "$GITHUB_OUTPUT"
           else
             echo "run=true" >> "$GITHUB_OUTPUT"

@@ -56,7 +56,7 @@ Przykłady: „dziś 84,2, 2450 kcal, Upper A, 4/5”, „wczoraj rower 40 km, s
 
 ## Cotygodniowy commit
 
-W niedzielę o 10:00 (Europe/Warsaw) `.github/workflows/weekly.yml` przenosi zakończony tydzień z `bufor` na `main` jednym
+W niedzielę o 08:00 (Europe/Warsaw) `.github/workflows/weekly.yml` przenosi zakończony tydzień z `bufor` na `main` jednym
 commitem: tydzień to niedziela–sobota przed tą niedzielą (11.10.2026 → 2026-10-04 do 2026-10-10). Razem z nim idą
 poprawki starszych dni i zmiany celów. Dni od niedzieli włącznie zostają na `bufor` do kolejnego tygodnia. Potem `bufor`
 jest przebudowywany na nowym `main` (stare commity zapisów znikają). Commit: `log: tydzień 2026-10-04 – 2026-10-10 (7 dni

@@ -31,6 +31,7 @@
     {"date": "2026-10-16", "weight": 87, "kcal": 2900, "protein": 175, "fat": 60, "carbs": 297, "training": "Upper B", "mood": 3, "sleep": 8, "sleepScore": 84, "note": "Wczoraj powrot do liczenia i tryhard. Dzisiaj sushi wiec troche wyjebalo miarke"},
     {"date": "2026-10-19", "weight": 88.1, "sleep": 7.8, "sleepScore": 93},
     {"date": "2026-10-20", "weight": 86.7, "kcal": 2300, "mood": 1, "sleep": 7.7, "sleepScore": 97},
-    {"date": "2026-10-21", "weight": 86.7, "kcal": 2600, "training": "Upper A", "mood": 3, "sleep": 7.2, "sleepScore": 77, "note": "Tak cos mnie bralo, zrobilem trening i pyk juz cos czuje ze nie tak"}
+    {"date": "2026-10-21", "weight": 86.7, "kcal": 2600, "training": "Upper A", "mood": 3, "sleep": 7.2, "sleepScore": 77, "note": "Tak cos mnie bralo, zrobilem trening i pyk juz cos czuje ze nie tak"},
+    {"date": "2026-10-22", "weight": 86.7, "mood": 3, "sleep": 8.8, "sleepScore": 78, "note": "Pospane ale czuc ze cos chorobsko atakuje, wzialem tabletki przeciwzapalne ale pracowac trzeba"}
   ]
 }

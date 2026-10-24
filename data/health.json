@@ -21,10 +21,17 @@
     {"date": "2026-10-06", "weight": 86.7, "kcal": 2800, "protein": 180, "fat": 80, "carbs": 350, "training": "Upper A", "mood": 3, "sleep": 6.9, "sleepScore": 79, "note": "Dzien spotka w biurze + kolacja firmowa. Ciężko powiedzieć ile kcal"},
     {"date": "2026-10-07", "weight": 86.5, "kcal": 2400, "protein": 170, "fat": 70, "carbs": 275, "mood": 2, "sleep": 7.6, "sleepScore": 68, "note": "Zmęczony po wczorajszymi dniu calym"},
     {"date": "2026-10-08", "weight": 86.5, "kcal": 2500, "mood": 4, "sleep": 9, "sleepScore": 95, "note": "Czułem sie extra, ale mało kofeiny, mniej niz zazwyczaj i mnie ścieło"},
-    {"date": "2026-10-09", "weight": 86.4, "kcal": 2320, "protein": 160, "fat": 40, "carbs": 330, "training": "Lower", "mood": 4, "sleep": 7.8, "sleepScore": 89},
+    {"date": "2026-10-09", "weight": 86.4, "kcal": 2720, "protein": 160, "fat": 85, "carbs": 330, "training": "Lower", "mood": 4, "sleep": 7.8, "sleepScore": 89},
     {"date": "2026-10-10", "kcal": 3000, "protein": 180, "fat": 100, "carbs": 350, "training": "Upper B", "mood": 4, "sleep": 8.5, "sleepScore": 85, "note": "w Lesznie jedzenie na oko"},
+    {"date": "2026-10-11", "kcal": 3000, "sleep": 8.5, "sleepScore": 95, "note": "Nie wiadomo ile kcal bo taki dzien, ale strzelilbtm jakies 3000"},
+    {"date": "2026-10-12", "kcal": 2600, "training": "Upper A", "sleep": 8.2, "sleepScore": 90, "note": "Dobrze dobrze, młyn w pracy sie zaczął wiec tak srednio idzie monitorowanie"},
+    {"date": "2026-10-13", "weight": 86.7, "kcal": 4000, "mood": 4, "sleep": 8, "sleepScore": 88, "note": "4 browary i pizza aaaaaa"},
+    {"date": "2026-10-14", "weight": 88.3, "mood": 2, "sleep": 7, "sleepScore": 44, "note": "Wczoraj 4 piwa"},
+    {"date": "2026-10-15", "weight": 87.2, "kcal": 2500, "protein": 200, "fat": 59, "carbs": 287, "training": "Lower", "sleep": 7.5, "sleepScore": 89, "note": "Powrot do liczenia i tryhardu"},
+    {"date": "2026-10-16", "weight": 87, "kcal": 2900, "protein": 175, "fat": 60, "carbs": 297, "training": "Upper B", "mood": 3, "sleep": 8, "sleepScore": 84, "note": "Wczoraj powrot do liczenia i tryhard. Dzisiaj sushi wiec troche wyjebalo miarke"},
     {"date": "2026-10-19", "weight": 88.1, "sleep": 7.8, "sleepScore": 93},
     {"date": "2026-10-20", "weight": 86.7, "kcal": 2300, "mood": 1, "sleep": 7.7, "sleepScore": 97},
-    {"date": "2026-10-21", "weight": 86.7, "mood": 4, "sleep": 7.2, "sleepScore": 77}
+    {"date": "2026-10-21", "weight": 86.7, "kcal": 2600, "training": "Upper A", "mood": 3, "sleep": 7.2, "sleepScore": 77, "note": "Tak cos mnie bralo, zrobilem trening i pyk juz cos czuje ze nie tak"},
+    {"date": "2026-10-22", "weight": 86.7, "mood": 3, "sleep": 8.8, "sleepScore": 78, "note": "Pospane ale czuc ze cos chorobsko atakuje, wzialem tabletki przeciwzapalne ale pracowac trzeba"}
   ]
 }
